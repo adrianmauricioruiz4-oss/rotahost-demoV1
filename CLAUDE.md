@@ -30,7 +30,7 @@ Nunca se publica nada sin intervención humana. Esta decisión no se discute ni 
 
 | Capa | Tecnología |
 |---|---|
-| Backend | Java 21, Spring Boot 3 (Web, Data JPA, Validation) |
+| Backend | Java 21, Spring Boot 4.1.0 (Web, Data JPA, Validation) |
 | BD | MySQL 8 (H2 en memoria para tests) |
 | Frontend | HTML + CSS + JavaScript vanilla, servido desde `src/main/resources/static` |
 | Tests | JUnit 5 + AssertJ |
@@ -66,7 +66,7 @@ Nunca se publica nada sin intervención humana. Esta decisión no se discute ni 
 ## 4. Arquitectura: package-by-feature
 
 ```
-com.turnos
+com.generador.horarios.proyecto
 ├── employee/        Employee, EmployeeRepository, EmployeeService, EmployeeController, dto/
 ├── preference/      Preference, ...
 ├── shift/           ShiftTemplate, ShiftAssignment, ...
@@ -111,6 +111,10 @@ services. `engine` no depende de Spring — Java puro, para poder testearlo sin 
 | H5 | No asignar a alguien marcado `UNAVAILABLE` esa fecha |
 | H6 | No asignar dos turnos solapados a la misma persona |
 | H7 | Cobertura mínima cumplida en cada franja (si no se puede: se avisa, no se rompe H1–H6) |
+
+Estas restricciones dejalas por defecto, pero crea la opcion para que el usuario tenga permiso para modificarlas
+
+
 
 **Blandas — se maximizan, se ponderan, nunca invalidan un cuadrante.**
 
