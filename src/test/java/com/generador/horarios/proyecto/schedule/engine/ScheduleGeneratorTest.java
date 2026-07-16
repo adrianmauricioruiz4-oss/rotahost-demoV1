@@ -133,13 +133,74 @@ class ScheduleGeneratorTest {
     }
 
     @Test
-    void breaksTiesByLowestEmployeeIdWhenNoScoringExistsYet() {
+    void breaksTiesByLowestEmployeeIdWhenScoresAreEqual() {
         Employee lowerId = employee(10L, "Ana", ContractType.FULL_TIME, null);
         Employee higherId = employee(20L, "Bea", ContractType.FULL_TIME, null);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
         GenerationResult result =
                 generator.generate(schedule, List.of(higherId, lowerId), List.of(requirement), List.of(), MONDAY);
+
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void prefersCandidateWithHigherDayPreferenceScoreOverLowerEmployeeId() {
+        // Bea tiene id más alto (perdería el desempate), pero prefiere trabajar
+        // los lunes con peso 5: debe ganarle a Ana, que no tiene preferencias.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        Preference beaPrefersMonday = new Preference(bea, PreferenceType.PREFERS_DAY, DayOfWeek.MONDAY, null, null, 5);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(requirement), List.of(beaPrefersMonday), MONDAY);
+
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void prefersCandidateWithHigherShiftPreferenceScoreOverLowerEmployeeId() {
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        Preference beaPrefersTarde = new Preference(bea, PreferenceType.PREFERS_SHIFT, null, tarde, null, 3);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(requirement), List.of(beaPrefersTarde), MONDAY);
+
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void avoidsPenalizesCandidateBelowANeutralOne() {
+        // Ana (id más bajo, ganaría el desempate) evita los lunes con peso 4:
+        // su puntuación queda en -4, por debajo de Bea (neutral, puntuación 0).
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        Preference anaAvoidsMonday = new Preference(ana, PreferenceType.AVOIDS_DAY, DayOfWeek.MONDAY, null, null, 4);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(requirement), List.of(anaAvoidsMonday), MONDAY);
+
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void sumsMultipleMatchingPreferencesForTheSameCandidate() {
+        // Ana acumula PREFERS_DAY(lunes, 2) + PREFERS_SHIFT(mañana, 2) = 4,
+        // más que la preferencia única de Bea (PREFERS_DAY lunes, 3).
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        Preference anaPrefersMonday = new Preference(ana, PreferenceType.PREFERS_DAY, DayOfWeek.MONDAY, null, null, 2);
+        Preference anaPrefersManana = new Preference(ana, PreferenceType.PREFERS_SHIFT, null, manana, null, 2);
+        Preference beaPrefersMonday = new Preference(bea, PreferenceType.PREFERS_DAY, DayOfWeek.MONDAY, null, null, 3);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(requirement),
+                List.of(anaPrefersMonday, anaPrefersManana, beaPrefersMonday), MONDAY);
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(10L);
     }

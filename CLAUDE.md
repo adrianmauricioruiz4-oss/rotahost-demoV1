@@ -172,7 +172,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T2.2 — CRUD de Preference (el empleado gestiona las suyas)
 - [x] T2.3 — **`ScheduleValidator`**: H1–H7 + tests exhaustivos. Empieza por aquí, antes que el generador.
 - [x] T2.4 — `ScheduleGenerator`: greedy sin equidad ni histórico (que cubra y no viole duras)
-- [ ] T2.5 — Puntuación de preferencias blandas (S1)
+- [x] T2.5 — Puntuación de preferencias blandas (S1)
 - [ ] T2.6 — Equidad con histórico de 3 semanas (S2) + informe de equidad
 - [ ] T2.7 — Rotación suave y agrupación de libranzas (S3, S4)
 - [ ] T2.8 — `POST /api/schedules/generate` → devuelve DRAFT + huecos + informe

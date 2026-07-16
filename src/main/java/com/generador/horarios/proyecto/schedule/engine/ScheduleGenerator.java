@@ -12,16 +12,19 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Greedy sin equidad ni histórico (T2.4): cubre los huecos de
- * CoverageRequirement sin violar ninguna restricción dura, reutilizando
- * ScheduleValidator para decidir si un candidato es válido en cada hueco.
- * Sin puntuación todavía (S1-S3 llegan en T2.5-T2.7): entre varios
- * candidatos válidos desempata por employeeId ascendente, de forma
- * determinista. Java puro, no depende de Spring.
+ * Greedy sin equidad ni histórico (T2.4) con puntuación de preferencias
+ * blandas S1 (T2.5): cubre los huecos de CoverageRequirement sin violar
+ * ninguna restricción dura, reutilizando ScheduleValidator para decidir si
+ * un candidato es válido en cada hueco, y entre los válidos elige el de
+ * mayor puntuación según sus preferencias de día/turno. S2 (equidad) y S3
+ * (rotación) llegan en T2.6/T2.7; hasta entonces, en empate de puntuación
+ * desempata por employeeId ascendente, de forma determinista. Java puro, no
+ * depende de Spring.
  */
 public class ScheduleGenerator {
 
@@ -47,6 +50,8 @@ public class ScheduleGenerator {
                 .filter(p -> p.getType() == PreferenceType.UNAVAILABLE)
                 .map(p -> new EmployeeDateKey(p.getEmployee().getId(), p.getSpecificDate()))
                 .collect(Collectors.toSet());
+        Map<Long, List<Preference>> preferencesByEmployee = preferences.stream()
+                .collect(Collectors.groupingBy(p -> p.getEmployee().getId()));
 
         List<CoverageSlotGroup> orderedGroups = orderByDifficulty(coverageRequirements, employees, unavailable, weekStart);
 
@@ -56,8 +61,8 @@ public class ScheduleGenerator {
         for (CoverageSlotGroup group : orderedGroups) {
             int filled = 0;
             for (int i = 0; i < group.requiredCount(); i++) {
-                Employee chosen =
-                        pickCandidate(group.date(), group.shiftTemplate(), employees, assignments, preferences, schedule, weekStart);
+                Employee chosen = pickCandidate(group.date(), group.shiftTemplate(), employees, assignments,
+                        preferences, preferencesByEmployee, schedule, weekStart);
                 if (chosen == null) {
                     break;
                 }
@@ -99,15 +104,55 @@ public class ScheduleGenerator {
                 .toList();
     }
 
+    /**
+     * Entre los candidatos que no violan ninguna dura, elige el de mayor
+     * puntuación S1 (preferencias de día/turno que cumple o incumple). En
+     * empate desempata por employeeId ascendente (S2/S3 llegan más adelante).
+     */
     private Employee pickCandidate(
             LocalDate date, ShiftTemplate shiftTemplate, List<Employee> employees, List<ShiftAssignment> currentAssignments,
-            List<Preference> preferences, Schedule schedule, LocalDate weekStart) {
+            List<Preference> preferences, Map<Long, List<Preference>> preferencesByEmployee, Schedule schedule, LocalDate weekStart) {
         return employees.stream()
                 .filter(Employee::isActive)
-                .sorted(Comparator.comparing(Employee::getId))
                 .filter(employee -> canAssign(employee, shiftTemplate, date, currentAssignments, preferences, schedule, weekStart))
-                .findFirst()
+                .max(Comparator
+                        .<Employee>comparingInt(employee -> preferenceScore(employee, date, shiftTemplate, preferencesByEmployee))
+                        .thenComparing(Comparator.comparing(Employee::getId).reversed()))
                 .orElse(null);
+    }
+
+    /** + peso de PREFERS_DAY/PREFERS_SHIFT que aplican a este hueco, - peso de AVOIDS_DAY/AVOIDS_SHIFT. */
+    private int preferenceScore(
+            Employee employee, LocalDate date, ShiftTemplate shiftTemplate, Map<Long, List<Preference>> preferencesByEmployee) {
+        int score = 0;
+        for (Preference preference : preferencesByEmployee.getOrDefault(employee.getId(), List.of())) {
+            switch (preference.getType()) {
+                case PREFERS_DAY -> {
+                    if (preference.getDayOfWeek() == date.getDayOfWeek()) {
+                        score += preference.getWeight();
+                    }
+                }
+                case AVOIDS_DAY -> {
+                    if (preference.getDayOfWeek() == date.getDayOfWeek()) {
+                        score -= preference.getWeight();
+                    }
+                }
+                case PREFERS_SHIFT -> {
+                    if (preference.getShiftTemplate() != null && preference.getShiftTemplate().getId().equals(shiftTemplate.getId())) {
+                        score += preference.getWeight();
+                    }
+                }
+                case AVOIDS_SHIFT -> {
+                    if (preference.getShiftTemplate() != null && preference.getShiftTemplate().getId().equals(shiftTemplate.getId())) {
+                        score -= preference.getWeight();
+                    }
+                }
+                case UNAVAILABLE -> {
+                    // restricción dura (H5), no puntúa
+                }
+            }
+        }
+        return score;
     }
 
     /** Reutiliza ScheduleValidator en vez de duplicar H1-H6: prueba a añadir la
