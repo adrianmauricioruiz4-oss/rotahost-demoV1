@@ -50,7 +50,7 @@ class ScheduleGeneratorTest {
         Employee e2 = employee(20L, "Bea", ContractType.FULL_TIME, null);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 2);
 
-        GenerationResult result = generator.generate(schedule, List.of(e1, e2), List.of(requirement), List.of(), MONDAY);
+        GenerationResult result = generate(List.of(e1, e2), List.of(requirement), List.of());
 
         assertThat(result.assignments()).hasSize(2);
         assertThat(result.uncoveredSlots()).isEmpty();
@@ -61,7 +61,7 @@ class ScheduleGeneratorTest {
         Employee e1 = employee(10L, "Ana", ContractType.FULL_TIME, null);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 3);
 
-        GenerationResult result = generator.generate(schedule, List.of(e1), List.of(requirement), List.of(), MONDAY);
+        GenerationResult result = generate(List.of(e1), List.of(requirement), List.of());
 
         assertThat(result.assignments()).hasSize(1);
         assertThat(result.uncoveredSlots()).containsExactly(new UncoveredSlot(MONDAY, manana.getId(), 2));
@@ -74,8 +74,8 @@ class ScheduleGeneratorTest {
         Preference unavailable = new Preference(unavailableEmployee, PreferenceType.UNAVAILABLE, null, null, MONDAY, 0);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(unavailableEmployee, availableEmployee), List.of(requirement), List.of(unavailable), MONDAY);
+        GenerationResult result =
+                generate(List.of(unavailableEmployee, availableEmployee), List.of(requirement), List.of(unavailable));
 
         assertThat(result.assignments()).hasSize(1);
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
@@ -89,8 +89,7 @@ class ScheduleGeneratorTest {
         CoverageRequirement morningRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
         CoverageRequirement afternoonRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(employee), List.of(morningRequirement, afternoonRequirement), List.of(), MONDAY);
+        GenerationResult result = generate(List.of(employee), List.of(morningRequirement, afternoonRequirement), List.of());
 
         assertThat(result.assignments()).hasSize(1);
         assertThat(result.uncoveredSlots()).hasSize(1);
@@ -116,12 +115,10 @@ class ScheduleGeneratorTest {
         CoverageRequirement mondayRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
         CoverageRequirement tuesdayRequirement = new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1);
 
-        GenerationResult result = generator.generate(
-                schedule,
+        GenerationResult result = generate(
                 List.of(tightBudgetEmployee, unavailableTuesday),
                 List.of(mondayRequirement, tuesdayRequirement),
-                List.of(unavailable),
-                MONDAY);
+                List.of(unavailable));
 
         assertThat(result.uncoveredSlots()).isEmpty();
         assertThat(result.assignments()).hasSize(2);
@@ -138,8 +135,7 @@ class ScheduleGeneratorTest {
         Employee higherId = employee(20L, "Bea", ContractType.FULL_TIME, null);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
-        GenerationResult result =
-                generator.generate(schedule, List.of(higherId, lowerId), List.of(requirement), List.of(), MONDAY);
+        GenerationResult result = generate(List.of(higherId, lowerId), List.of(requirement), List.of());
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(10L);
     }
@@ -153,8 +149,7 @@ class ScheduleGeneratorTest {
         Preference beaPrefersMonday = new Preference(bea, PreferenceType.PREFERS_DAY, DayOfWeek.MONDAY, null, null, 5);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(ana, bea), List.of(requirement), List.of(beaPrefersMonday), MONDAY);
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of(beaPrefersMonday));
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
     }
@@ -166,8 +161,7 @@ class ScheduleGeneratorTest {
         Preference beaPrefersTarde = new Preference(bea, PreferenceType.PREFERS_SHIFT, null, tarde, null, 3);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(ana, bea), List.of(requirement), List.of(beaPrefersTarde), MONDAY);
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of(beaPrefersTarde));
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
     }
@@ -181,8 +175,7 @@ class ScheduleGeneratorTest {
         Preference anaAvoidsMonday = new Preference(ana, PreferenceType.AVOIDS_DAY, DayOfWeek.MONDAY, null, null, 4);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(ana, bea), List.of(requirement), List.of(anaAvoidsMonday), MONDAY);
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of(anaAvoidsMonday));
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
     }
@@ -198,11 +191,91 @@ class ScheduleGeneratorTest {
         Preference beaPrefersMonday = new Preference(bea, PreferenceType.PREFERS_DAY, DayOfWeek.MONDAY, null, null, 3);
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
 
-        GenerationResult result = generator.generate(
-                schedule, List.of(ana, bea), List.of(requirement),
-                List.of(anaPrefersMonday, anaPrefersManana, beaPrefersMonday), MONDAY);
+        GenerationResult result = generate(
+                List.of(ana, bea), List.of(requirement),
+                List.of(anaPrefersMonday, anaPrefersManana, beaPrefersMonday));
 
         assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void penalizesBadShiftCandidateWithMoreAccumulatedBadShiftsThisWeek() {
+        // Viernes y sábado noche (TARDE) son ambos turnos malos, con descanso de
+        // sobra entre ellos (16h). Sin preferencias, el primero (viernes, procesado
+        // antes por fecha) lo gana Ana por desempate de id; eso le suma un turno
+        // malo, así que el segundo (sábado) debe irse a Bea por equidad.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        LocalDate friday = MONDAY.plusDays(4);
+        LocalDate saturday = MONDAY.plusDays(5);
+        CoverageRequirement fridayRequirement = new CoverageRequirement(venue, DayOfWeek.FRIDAY, tarde, 1);
+        CoverageRequirement saturdayRequirement = new CoverageRequirement(venue, DayOfWeek.SATURDAY, tarde, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(fridayRequirement, saturdayRequirement), List.of());
+
+        assertThat(result.assignments()).hasSize(2);
+        ShiftAssignment fridayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(friday)).findFirst().orElseThrow();
+        ShiftAssignment saturdayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(saturday)).findFirst().orElseThrow();
+        assertThat(fridayAssignment.getEmployee().getId()).isEqualTo(10L);
+        assertThat(saturdayAssignment.getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void penalizesBadShiftCandidateWithHistoricalBadShifts() {
+        // Ana ya acumula 2 turnos malos en las 3 semanas anteriores; Bea, ninguno.
+        // Para un hueco de domingo, debe preferir a Bea aunque Ana tenga id más bajo.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        LocalDate threeWeeksAgo = MONDAY.minusWeeks(2);
+        ShiftAssignment historicalSunday1 =
+                new ShiftAssignment(ana, tarde, schedule, threeWeeksAgo.plusDays(6));
+        ShiftAssignment historicalSunday2 =
+                new ShiftAssignment(ana, tarde, schedule, threeWeeksAgo.plusWeeks(1).plusDays(6));
+        CoverageRequirement sundayRequirement = new CoverageRequirement(venue, DayOfWeek.SUNDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(sundayRequirement), List.of(),
+                List.of(historicalSunday1, historicalSunday2), MONDAY);
+
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void doesNotApplyEquityPenaltyToRegularShifts() {
+        // Turno de martes por la mañana: no es un turno malo, así que el histórico
+        // de domingos de Ana no debería penalizarla frente a Bea.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        LocalDate threeWeeksAgo = MONDAY.minusWeeks(3);
+        ShiftAssignment historicalSunday = new ShiftAssignment(ana, tarde, schedule, threeWeeksAgo.plusDays(6));
+        CoverageRequirement tuesdayRequirement = new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana, bea), List.of(tuesdayRequirement), List.of(),
+                List.of(historicalSunday), MONDAY);
+
+        // Sin penalización de equidad, el desempate vuelve a ser por id más bajo.
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void equityReportCountsBadShiftsThisWeekAndWithHistory() {
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        LocalDate threeWeeksAgo = MONDAY.minusWeeks(2);
+        ShiftAssignment historicalSunday = new ShiftAssignment(ana, tarde, schedule, threeWeeksAgo.plusDays(6));
+        CoverageRequirement sundayRequirement = new CoverageRequirement(venue, DayOfWeek.SUNDAY, manana, 1);
+
+        GenerationResult result = generator.generate(
+                schedule, List.of(ana), List.of(sundayRequirement), List.of(),
+                List.of(historicalSunday), MONDAY);
+
+        assertThat(result.equityReport()).containsExactly(new EquityReportEntry(10L, 1, 2));
+    }
+
+    private GenerationResult generate(List<Employee> employees, List<CoverageRequirement> requirements, List<Preference> preferences) {
+        return generator.generate(schedule, employees, requirements, preferences, List.of(), MONDAY);
     }
 
     private Employee employee(Long id, String name, ContractType contractType, Integer contractHours) {

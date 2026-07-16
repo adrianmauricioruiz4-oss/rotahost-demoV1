@@ -5,28 +5,35 @@ import com.generador.horarios.proyecto.preference.Preference;
 import com.generador.horarios.proyecto.preference.PreferenceType;
 import com.generador.horarios.proyecto.schedule.Schedule;
 import com.generador.horarios.proyecto.shift.ShiftAssignment;
+import com.generador.horarios.proyecto.shift.ShiftSegment;
 import com.generador.horarios.proyecto.shift.ShiftTemplate;
 import com.generador.horarios.proyecto.venue.CoverageRequirement;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Greedy sin equidad ni histórico (T2.4) con puntuación de preferencias
- * blandas S1 (T2.5): cubre los huecos de CoverageRequirement sin violar
- * ninguna restricción dura, reutilizando ScheduleValidator para decidir si
- * un candidato es válido en cada hueco, y entre los válidos elige el de
- * mayor puntuación según sus preferencias de día/turno. S2 (equidad) y S3
- * (rotación) llegan en T2.6/T2.7; hasta entonces, en empate de puntuación
- * desempata por employeeId ascendente, de forma determinista. Java puro, no
- * depende de Spring.
+ * Greedy sin histórico entre generaciones más allá de S2 (T2.4), con
+ * puntuación de preferencias blandas S1 (T2.5) y equidad de turnos malos S2
+ * (T2.6): cubre los huecos de CoverageRequirement sin violar ninguna
+ * restricción dura, reutilizando ScheduleValidator para decidir si un
+ * candidato es válido en cada hueco, y entre los válidos elige el de mayor
+ * puntuación combinando preferencias y equidad. S3 (rotación) y S4
+ * (agrupación de libranzas) llegan en T2.7; hasta entonces, en empate de
+ * puntuación desempata por employeeId ascendente, de forma determinista.
+ * Java puro, no depende de Spring.
  */
 public class ScheduleGenerator {
+
+    /** Peso de la penalización de equidad por cada turno malo ya acumulado. */
+    private static final int BAD_SHIFT_EQUITY_PENALTY = 3;
 
     private final ScheduleValidator scheduleValidator;
 
@@ -35,15 +42,19 @@ public class ScheduleGenerator {
     }
 
     /**
-     * @param employees            candidatos ya filtrados por el caller (activos, del venue)
-     * @param coverageRequirements huecos a cubrir para esa semana/venue
-     * @param weekStart            lunes de la semana ISO que se está generando
+     * @param employees             candidatos ya filtrados por el caller (activos, del venue)
+     * @param coverageRequirements  huecos a cubrir para esa semana/venue
+     * @param historicalAssignments asignaciones de las 3 semanas anteriores (ya
+     *                               filtradas por el caller), usadas solo para
+     *                               contar turnos malos acumulados (S2)
+     * @param weekStart              lunes de la semana ISO que se está generando
      */
     public GenerationResult generate(
             Schedule schedule,
             List<Employee> employees,
             List<CoverageRequirement> coverageRequirements,
             List<Preference> preferences,
+            List<ShiftAssignment> historicalAssignments,
             LocalDate weekStart) {
 
         Set<EmployeeDateKey> unavailable = preferences.stream()
@@ -52,6 +63,10 @@ public class ScheduleGenerator {
                 .collect(Collectors.toSet());
         Map<Long, List<Preference>> preferencesByEmployee = preferences.stream()
                 .collect(Collectors.groupingBy(p -> p.getEmployee().getId()));
+        Map<Long, Integer> historicalBadShiftCounts = historicalAssignments.stream()
+                .filter(a -> isBadShift(a.getDate(), a.getShiftTemplate()))
+                .collect(Collectors.groupingBy(a -> a.getEmployee().getId(), Collectors.summingInt(a -> 1)));
+        Map<Long, Integer> currentBadShiftCounts = new HashMap<>();
 
         List<CoverageSlotGroup> orderedGroups = orderByDifficulty(coverageRequirements, employees, unavailable, weekStart);
 
@@ -62,19 +77,31 @@ public class ScheduleGenerator {
             int filled = 0;
             for (int i = 0; i < group.requiredCount(); i++) {
                 Employee chosen = pickCandidate(group.date(), group.shiftTemplate(), employees, assignments,
-                        preferences, preferencesByEmployee, schedule, weekStart);
+                        preferences, preferencesByEmployee, historicalBadShiftCounts, currentBadShiftCounts, schedule, weekStart);
                 if (chosen == null) {
                     break;
                 }
                 assignments.add(new ShiftAssignment(chosen, group.shiftTemplate(), schedule, group.date()));
                 filled++;
+                if (isBadShift(group.date(), group.shiftTemplate())) {
+                    currentBadShiftCounts.merge(chosen.getId(), 1, Integer::sum);
+                }
             }
             if (filled < group.requiredCount()) {
                 uncoveredSlots.add(new UncoveredSlot(group.date(), group.shiftTemplate().getId(), group.requiredCount() - filled));
             }
         }
 
-        return new GenerationResult(assignments, uncoveredSlots);
+        List<EquityReportEntry> equityReport = employees.stream()
+                .map(employee -> {
+                    int thisWeek = currentBadShiftCounts.getOrDefault(employee.getId(), 0);
+                    int historical = historicalBadShiftCounts.getOrDefault(employee.getId(), 0);
+                    return new EquityReportEntry(employee.getId(), thisWeek, thisWeek + historical);
+                })
+                .sorted(Comparator.comparing(EquityReportEntry::employeeId))
+                .toList();
+
+        return new GenerationResult(assignments, uncoveredSlots, equityReport);
     }
 
     /**
@@ -106,17 +133,20 @@ public class ScheduleGenerator {
 
     /**
      * Entre los candidatos que no violan ninguna dura, elige el de mayor
-     * puntuación S1 (preferencias de día/turno que cumple o incumple). En
-     * empate desempata por employeeId ascendente (S2/S3 llegan más adelante).
+     * puntuación combinada (S1 preferencias + S2 equidad). En empate
+     * desempata por employeeId ascendente (S3 llega en T2.7).
      */
     private Employee pickCandidate(
             LocalDate date, ShiftTemplate shiftTemplate, List<Employee> employees, List<ShiftAssignment> currentAssignments,
-            List<Preference> preferences, Map<Long, List<Preference>> preferencesByEmployee, Schedule schedule, LocalDate weekStart) {
+            List<Preference> preferences, Map<Long, List<Preference>> preferencesByEmployee,
+            Map<Long, Integer> historicalBadShiftCounts, Map<Long, Integer> currentBadShiftCounts,
+            Schedule schedule, LocalDate weekStart) {
         return employees.stream()
                 .filter(Employee::isActive)
                 .filter(employee -> canAssign(employee, shiftTemplate, date, currentAssignments, preferences, schedule, weekStart))
                 .max(Comparator
-                        .<Employee>comparingInt(employee -> preferenceScore(employee, date, shiftTemplate, preferencesByEmployee))
+                        .<Employee>comparingInt(employee -> preferenceScore(employee, date, shiftTemplate, preferencesByEmployee)
+                                + equityPenalty(employee, date, shiftTemplate, historicalBadShiftCounts, currentBadShiftCounts))
                         .thenComparing(Comparator.comparing(Employee::getId).reversed()))
                 .orElse(null);
     }
@@ -153,6 +183,41 @@ public class ScheduleGenerator {
             }
         }
         return score;
+    }
+
+    /**
+     * S2: solo penaliza cuando el hueco en sí es un turno malo. Cuanto más
+     * turnos malos lleve ya el candidato (histórico de 3 semanas + los ya
+     * asignados esta misma semana), más se penaliza, para repartirlos.
+     */
+    private int equityPenalty(
+            Employee employee, LocalDate date, ShiftTemplate shiftTemplate,
+            Map<Long, Integer> historicalBadShiftCounts, Map<Long, Integer> currentBadShiftCounts) {
+        if (!isBadShift(date, shiftTemplate)) {
+            return 0;
+        }
+        int accumulated = historicalBadShiftCounts.getOrDefault(employee.getId(), 0)
+                + currentBadShiftCounts.getOrDefault(employee.getId(), 0);
+        return -accumulated * BAD_SHIFT_EQUITY_PENALTY;
+    }
+
+    /**
+     * S2: domingo (cualquier turno) o viernes/sábado de noche. No hay
+     * concepto de festivo todavía (backlog: "Gestión de festivos por CCAA").
+     */
+    private boolean isBadShift(LocalDate date, ShiftTemplate shiftTemplate) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        if (dayOfWeek == DayOfWeek.SUNDAY) {
+            return true;
+        }
+        return (dayOfWeek == DayOfWeek.FRIDAY || dayOfWeek == DayOfWeek.SATURDAY) && isNightShift(shiftTemplate);
+    }
+
+    /** Propiedad del turno, no de la fecha: cruza medianoche o termina a las 20:00 o más tarde. */
+    private boolean isNightShift(ShiftTemplate shiftTemplate) {
+        List<ShiftSegment> segments = shiftTemplate.getSegments();
+        LocalTime lastSegmentEnd = segments.get(segments.size() - 1).getEndTime();
+        return lastSegmentEnd.equals(LocalTime.MIDNIGHT) || !lastSegmentEnd.isBefore(LocalTime.of(20, 0));
     }
 
     /** Reutiliza ScheduleValidator en vez de duplicar H1-H6: prueba a añadir la
