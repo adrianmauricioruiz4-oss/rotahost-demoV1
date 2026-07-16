@@ -274,6 +274,72 @@ class ScheduleGeneratorTest {
         assertThat(result.equityReport()).containsExactly(new EquityReportEntry(10L, 1, 2));
     }
 
+    @Test
+    void penalizesAbruptRotationFromLateShiftToEarlierStartingShiftNextDayEvenWhenH1IsSatisfied() {
+        // TARDE (empieza 16:00) el lunes, MEDIODIA (empieza 12:00, más temprano)
+        // el martes: el descanso es exactamente 12h (cumple H1), pero es rotación
+        // hacia atrás. Ana gana el lunes por desempate; para el martes debe perder
+        // frente a Bea, que no tiene esa rotación brusca.
+        ShiftTemplate mediodia = shiftTemplate("MEDIODIA", new ShiftSegment(LocalTime.of(12, 0), LocalTime.of(20, 0)));
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement mondayTarde = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+        CoverageRequirement tuesdayMediodia = new CoverageRequirement(venue, DayOfWeek.TUESDAY, mediodia, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(mondayTarde, tuesdayMediodia), List.of());
+
+        assertThat(result.assignments()).hasSize(2);
+        ShiftAssignment mondayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(MONDAY)).findFirst().orElseThrow();
+        ShiftAssignment tuesdayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(TUESDAY)).findFirst().orElseThrow();
+        assertThat(mondayAssignment.getEmployee().getId()).isEqualTo(10L);
+        assertThat(tuesdayAssignment.getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void penalizesCreatingAnIsolatedSingleDayOff() {
+        // Ana gana el lunes por desempate. Para el miércoles, asignárselo también
+        // a Ana dejaría el martes como día libre suelto entre dos días trabajados;
+        // debe preferir a Bea, que no tiene esa fragmentación.
+        LocalDate wednesday = MONDAY.plusDays(2);
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement mondayRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+        CoverageRequirement wednesdayRequirement = new CoverageRequirement(venue, DayOfWeek.WEDNESDAY, manana, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(mondayRequirement, wednesdayRequirement), List.of());
+
+        assertThat(result.assignments()).hasSize(2);
+        ShiftAssignment mondayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(MONDAY)).findFirst().orElseThrow();
+        ShiftAssignment wednesdayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(wednesday)).findFirst().orElseThrow();
+        assertThat(mondayAssignment.getEmployee().getId()).isEqualTo(10L);
+        assertThat(wednesdayAssignment.getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void doesNotPenalizeConsecutiveWorkDays() {
+        // Ana trabaja lunes y martes seguidos (racha sin huecos); para el
+        // miércoles no hay ningún día suelto que fragmentar, así que no debería
+        // haber penalización de S4 y el desempate vuelve a ser por id más bajo.
+        LocalDate wednesday = MONDAY.plusDays(2);
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement mondayRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+        CoverageRequirement tuesdayRequirement = new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1);
+        CoverageRequirement wednesdayRequirement = new CoverageRequirement(venue, DayOfWeek.WEDNESDAY, manana, 1);
+
+        GenerationResult result = generate(
+                List.of(ana, bea), List.of(mondayRequirement, tuesdayRequirement, wednesdayRequirement), List.of());
+
+        assertThat(result.assignments()).hasSize(3);
+        ShiftAssignment wednesdayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(wednesday)).findFirst().orElseThrow();
+        assertThat(wednesdayAssignment.getEmployee().getId()).isEqualTo(10L);
+    }
+
     private GenerationResult generate(List<Employee> employees, List<CoverageRequirement> requirements, List<Preference> preferences) {
         return generator.generate(schedule, employees, requirements, preferences, List.of(), MONDAY);
     }

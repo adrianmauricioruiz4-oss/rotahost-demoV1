@@ -16,24 +16,28 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Greedy sin histórico entre generaciones más allá de S2 (T2.4), con
- * puntuación de preferencias blandas S1 (T2.5) y equidad de turnos malos S2
- * (T2.6): cubre los huecos de CoverageRequirement sin violar ninguna
- * restricción dura, reutilizando ScheduleValidator para decidir si un
- * candidato es válido en cada hueco, y entre los válidos elige el de mayor
- * puntuación combinando preferencias y equidad. S3 (rotación) y S4
- * (agrupación de libranzas) llegan en T2.7; hasta entonces, en empate de
- * puntuación desempata por employeeId ascendente, de forma determinista.
- * Java puro, no depende de Spring.
+ * Greedy (T2.4) con puntuación de preferencias blandas S1 (T2.5), equidad de
+ * turnos malos S2 (T2.6) y suavizado de rotación S3 + agrupación de
+ * libranzas S4 (T2.7): cubre los huecos de CoverageRequirement sin violar
+ * ninguna restricción dura, reutilizando ScheduleValidator para decidir si
+ * un candidato es válido en cada hueco, y entre los válidos elige el de
+ * mayor puntuación combinada. En empate de puntuación desempata por
+ * employeeId ascendente, de forma determinista. Java puro, no depende de
+ * Spring.
  */
 public class ScheduleGenerator {
 
     /** Peso de la penalización de equidad por cada turno malo ya acumulado. */
     private static final int BAD_SHIFT_EQUITY_PENALTY = 3;
+
+    /** Peso de la penalización por rotación brusca (S3) e islas de un solo día libre (S4). */
+    private static final int ROTATION_PENALTY = 2;
+    private static final int ISOLATED_DAY_OFF_PENALTY = 2;
 
     private final ScheduleValidator scheduleValidator;
 
@@ -133,8 +137,8 @@ public class ScheduleGenerator {
 
     /**
      * Entre los candidatos que no violan ninguna dura, elige el de mayor
-     * puntuación combinada (S1 preferencias + S2 equidad). En empate
-     * desempata por employeeId ascendente (S3 llega en T2.7).
+     * puntuación combinada (S1 preferencias + S2 equidad + S3 rotación + S4
+     * libranzas agrupadas). En empate desempata por employeeId ascendente.
      */
     private Employee pickCandidate(
             LocalDate date, ShiftTemplate shiftTemplate, List<Employee> employees, List<ShiftAssignment> currentAssignments,
@@ -146,7 +150,9 @@ public class ScheduleGenerator {
                 .filter(employee -> canAssign(employee, shiftTemplate, date, currentAssignments, preferences, schedule, weekStart))
                 .max(Comparator
                         .<Employee>comparingInt(employee -> preferenceScore(employee, date, shiftTemplate, preferencesByEmployee)
-                                + equityPenalty(employee, date, shiftTemplate, historicalBadShiftCounts, currentBadShiftCounts))
+                                + equityPenalty(employee, date, shiftTemplate, historicalBadShiftCounts, currentBadShiftCounts)
+                                + rotationPenalty(employee, date, shiftTemplate, currentAssignments)
+                                + isolatedDayOffPenalty(employee, date, currentAssignments))
                         .thenComparing(Comparator.comparing(Employee::getId).reversed()))
                 .orElse(null);
     }
@@ -218,6 +224,64 @@ public class ScheduleGenerator {
         List<ShiftSegment> segments = shiftTemplate.getSegments();
         LocalTime lastSegmentEnd = segments.get(segments.size() - 1).getEndTime();
         return lastSegmentEnd.equals(LocalTime.MIDNIGHT) || !lastSegmentEnd.isBefore(LocalTime.of(20, 0));
+    }
+
+    /**
+     * S3: penaliza aunque H1 (12h) ya esté satisfecho — "tarde -> mañana al
+     * día siguiente" es brusco aunque cumpla el descanso mínimo. Se considera
+     * brusco cuando la hora de inicio de un día es más temprana que la del
+     * día anterior. Comprueba ambas direcciones (día-1 y día+1) porque el
+     * relleno no es estrictamente cronológico (va por dificultad).
+     */
+    private int rotationPenalty(
+            Employee employee, LocalDate date, ShiftTemplate shiftTemplate, List<ShiftAssignment> currentAssignments) {
+        LocalTime thisStart = firstSegmentStart(shiftTemplate);
+        int penalty = 0;
+
+        Optional<ShiftAssignment> previousDay = findAssignment(employee, date.minusDays(1), currentAssignments);
+        if (previousDay.isPresent() && thisStart.isBefore(firstSegmentStart(previousDay.get().getShiftTemplate()))) {
+            penalty -= ROTATION_PENALTY;
+        }
+
+        Optional<ShiftAssignment> nextDay = findAssignment(employee, date.plusDays(1), currentAssignments);
+        if (nextDay.isPresent() && firstSegmentStart(nextDay.get().getShiftTemplate()).isBefore(thisStart)) {
+            penalty -= ROTATION_PENALTY;
+        }
+
+        return penalty;
+    }
+
+    /**
+     * S4: sin visión de la semana completa ni backtracking, penaliza el caso
+     * local detectable: asignar este hueco dejaría un único día libre
+     * aislado entre dos días trabajados (p. ej. trabaja lunes, nada el
+     * martes, y le asignamos miércoles -> el martes queda suelto).
+     */
+    private int isolatedDayOffPenalty(Employee employee, LocalDate date, List<ShiftAssignment> currentAssignments) {
+        int penalty = 0;
+        boolean workedTwoDaysBefore = findAssignment(employee, date.minusDays(2), currentAssignments).isPresent();
+        boolean workedDayBefore = findAssignment(employee, date.minusDays(1), currentAssignments).isPresent();
+        if (workedTwoDaysBefore && !workedDayBefore) {
+            penalty -= ISOLATED_DAY_OFF_PENALTY;
+        }
+
+        boolean workedTwoDaysAfter = findAssignment(employee, date.plusDays(2), currentAssignments).isPresent();
+        boolean workedDayAfter = findAssignment(employee, date.plusDays(1), currentAssignments).isPresent();
+        if (workedTwoDaysAfter && !workedDayAfter) {
+            penalty -= ISOLATED_DAY_OFF_PENALTY;
+        }
+
+        return penalty;
+    }
+
+    private Optional<ShiftAssignment> findAssignment(Employee employee, LocalDate date, List<ShiftAssignment> assignments) {
+        return assignments.stream()
+                .filter(a -> a.getEmployee().getId().equals(employee.getId()) && a.getDate().equals(date))
+                .findFirst();
+    }
+
+    private LocalTime firstSegmentStart(ShiftTemplate shiftTemplate) {
+        return shiftTemplate.getSegments().get(0).getStartTime();
     }
 
     /** Reutiliza ScheduleValidator en vez de duplicar H1-H6: prueba a añadir la
