@@ -1,0 +1,123 @@
+:root {
+    --border-color: #d8dee4;
+    --header-bg: #1f2937;
+    --header-fg: #f9fafb;
+    --row-alt-bg: #f3f4f6;
+    --cell-empty-fg: #9ca3af;
+    --shift-bg: #e0e7ff;
+    --shift-fg: #3730a3;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #ffffff;
+    color: #111827;
+}
+
+.app-header {
+    padding: 1rem 1.5rem;
+    background: var(--header-bg);
+    color: var(--header-fg);
+}
+
+.app-header h1 {
+    margin: 0 0 0.25rem;
+    font-size: 1.25rem;
+}
+
+.app-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #d1d5db;
+}
+
+main {
+    padding: 1rem;
+}
+
+.schedule-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.schedule-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 720px;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.schedule-table thead th {
+    background: var(--header-bg);
+    color: var(--header-fg);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.employee-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+}
+
+.schedule-table thead th.employee-col {
+    z-index: 3;
+    background: var(--header-bg);
+}
+
+.schedule-table tbody td.employee-col {
+    background: #ffffff;
+    font-weight: 600;
+}
+
+.schedule-table tbody tr:nth-child(even) td {
+    background: var(--row-alt-bg);
+}
+
+.shift-cell {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--shift-bg);
+    color: var(--shift-fg);
+}
+
+.shift-cell.empty {
+    background: none;
+    color: var(--cell-empty-fg);
+    font-weight: 400;
+    padding-left: 0;
+}
+
+@media (max-width: 640px) {
+    .app-header {
+        padding: 0.75rem 1rem;
+    }
+
+    main {
+        padding: 0.5rem;
+    }
+
+    .schedule-table th,
+    .schedule-table td {
+        padding: 0.5rem;
+        font-size: 0.8rem;
+    }
+}

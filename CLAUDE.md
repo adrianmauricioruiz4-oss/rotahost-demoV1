@@ -178,7 +178,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T2.8 — `POST /api/schedules/generate` → devuelve DRAFT + huecos + informe
 
 ### Fase 3 — Interfaz
-- [ ] T3.1 — Vista cuadrante semanal (tabla días × empleados), CSS propio, responsive
+- [x] T3.1 — Vista cuadrante semanal (tabla días × empleados), CSS propio, responsive
 - [ ] T3.2 — Botón "Generar semana" → pinta el DRAFT
 - [ ] T3.3 — **Edición manual**: cambiar una asignación revalida al vuelo y avisa en rojo si rompe una dura
 - [ ] T3.4 — Publicar cuadrante (`DRAFT` → `PUBLISHED`, bloquea edición)
