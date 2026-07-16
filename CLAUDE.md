@@ -165,7 +165,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T1.3 — CRUD de Employee (service + controller + DTOs + validación + tests)
 - [x] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
 - [x] T1.5 — `GlobalExceptionHandler` + respuesta de error uniforme
-- [ ] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
+- [x] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
 
 ### Fase 2 — El núcleo
 - [ ] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
