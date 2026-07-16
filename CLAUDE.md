@@ -168,7 +168,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
 
 ### Fase 2 — El núcleo
-- [ ] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
+- [x] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
 - [ ] T2.2 — CRUD de Preference (el empleado gestiona las suyas)
 - [ ] T2.3 — **`ScheduleValidator`**: H1–H7 + tests exhaustivos. Empieza por aquí, antes que el generador.
 - [ ] T2.4 — `ScheduleGenerator`: greedy sin equidad ni histórico (que cubra y no viole duras)
