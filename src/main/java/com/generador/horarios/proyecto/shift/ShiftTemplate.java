@@ -40,6 +40,9 @@ public class ShiftTemplate {
     @OrderColumn(name = "segment_order")
     private List<ShiftSegment> segments = new ArrayList<>();
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     protected ShiftTemplate() {
     }
 
@@ -75,5 +78,13 @@ public class ShiftTemplate {
 
     public void setSegments(List<ShiftSegment> segments) {
         this.segments = segments;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

@@ -163,7 +163,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T1.1 — `./mvnw` init, `pom.xml`, estructura de paquetes, `application.yml` (MySQL + perfil `test` con H2), `.gitignore`
 - [x] T1.2 — Entidades JPA + repositorios: Venue, Employee, ShiftTemplate, CoverageRequirement
 - [x] T1.3 — CRUD de Employee (service + controller + DTOs + validación + tests)
-- [ ] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
+- [x] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
 - [ ] T1.5 — `GlobalExceptionHandler` + respuesta de error uniforme
 - [ ] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
 
