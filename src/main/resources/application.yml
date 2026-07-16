@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: proyecto
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:turnos}?useSSL=false&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false

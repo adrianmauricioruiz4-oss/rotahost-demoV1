@@ -160,7 +160,7 @@ largo del tiempo. No lo omitas.
 Marca las casillas al completar. Una tarea, un commit.
 
 ### Fase 1 — Cimientos
-- [ ] T1.1 — `./mvnw` init, `pom.xml`, estructura de paquetes, `application.yml` (MySQL + perfil `test` con H2), `.gitignore`
+- [x] T1.1 — `./mvnw` init, `pom.xml`, estructura de paquetes, `application.yml` (MySQL + perfil `test` con H2), `.gitignore`
 - [ ] T1.2 — Entidades JPA + repositorios: Venue, Employee, ShiftTemplate, CoverageRequirement
 - [ ] T1.3 — CRUD de Employee (service + controller + DTOs + validación + tests)
 - [ ] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
