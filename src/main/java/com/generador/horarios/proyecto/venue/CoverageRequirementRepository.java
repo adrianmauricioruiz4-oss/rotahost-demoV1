@@ -1,6 +1,7 @@
 package com.generador.horarios.proyecto.venue;
 
 import java.time.DayOfWeek;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -8,4 +9,6 @@ public interface CoverageRequirementRepository extends JpaRepository<CoverageReq
 
     Optional<CoverageRequirement> findByVenueIdAndDayOfWeekAndShiftTemplateId(
             Long venueId, DayOfWeek dayOfWeek, Long shiftTemplateId);
+
+    List<CoverageRequirement> findByVenueId(Long venueId);
 }

@@ -175,7 +175,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T2.5 — Puntuación de preferencias blandas (S1)
 - [x] T2.6 — Equidad con histórico de 3 semanas (S2) + informe de equidad
 - [x] T2.7 — Rotación suave y agrupación de libranzas (S3, S4)
-- [ ] T2.8 — `POST /api/schedules/generate` → devuelve DRAFT + huecos + informe
+- [x] T2.8 — `POST /api/schedules/generate` → devuelve DRAFT + huecos + informe
 
 ### Fase 3 — Interfaz
 - [ ] T3.1 — Vista cuadrante semanal (tabla días × empleados), CSS propio, responsive
