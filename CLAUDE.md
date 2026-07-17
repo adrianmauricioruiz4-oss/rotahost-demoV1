@@ -186,7 +186,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [ ] T3.5 — Vista del empleado: mi semana + gestionar mis preferencias
 - [ ] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)
 - [x] T3.7 — Mostrar horas de entrada/salida de cada turno en el cuadrante semanal
-- [ ] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
+- [x] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
 
 ### Fase 4 — Salir al mercado
 - [ ] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`

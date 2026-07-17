@@ -40,8 +40,32 @@ body {
     color: #d1d5db;
 }
 
+.app-header .app-nav {
+    margin-top: 0.5rem;
+}
+
+.app-header .app-nav a {
+    color: #93c5fd;
+}
+
 main {
     padding: 1rem;
+}
+
+.settings-section {
+    margin-bottom: 2rem;
+}
+
+.settings-section h2 {
+    font-size: 1.05rem;
+    margin: 0 0 0.75rem;
+}
+
+.shift-template-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .generate-form {
