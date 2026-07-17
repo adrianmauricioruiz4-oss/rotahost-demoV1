@@ -166,7 +166,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
 - [x] T1.5 — `GlobalExceptionHandler` + respuesta de error uniforme
 - [x] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
-- [ ] T1.7 — CRUD parcial de Venue (`GET`/`PUT`, sin alta/baja): leer y editar nombre y horario de apertura/cierre
+- [x] T1.7 — CRUD parcial de Venue (`GET`/`PUT`, sin alta/baja): leer y editar nombre y horario de apertura/cierre
 
 ### Fase 2 — El núcleo
 - [x] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
