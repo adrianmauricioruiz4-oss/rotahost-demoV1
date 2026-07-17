@@ -8,11 +8,30 @@
 </head>
 <body>
     <header class="app-header">
-        <h1 id="venue-name">Cargando…</h1>
-        <p id="week-label"></p>
+        <h1 id="venue-name">Turnos</h1>
+        <p id="week-label">Genera un cuadrante para ver el DRAFT aquí.</p>
     </header>
 
     <main>
+        <form id="generate-form" class="generate-form">
+            <label>
+                Venue ID
+                <input type="number" id="venue-id-input" min="1" value="1" required>
+            </label>
+            <label>
+                Año ISO
+                <input type="number" id="iso-year-input" min="2000" required>
+            </label>
+            <label>
+                Semana ISO
+                <input type="number" id="iso-week-input" min="1" max="53" required>
+            </label>
+            <button type="submit" id="generate-button">Generar semana</button>
+        </form>
+
+        <p id="status-message" class="status-message" hidden></p>
+        <ul id="uncovered-list" class="uncovered-list" hidden></ul>
+
         <div class="schedule-wrapper">
             <table id="schedule-table" class="schedule-table">
                 <thead>

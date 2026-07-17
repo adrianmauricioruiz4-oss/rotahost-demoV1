@@ -6,6 +6,10 @@
     --cell-empty-fg: #9ca3af;
     --shift-bg: #e0e7ff;
     --shift-fg: #3730a3;
+    --success-bg: #ecfdf5;
+    --success-fg: #065f46;
+    --error-bg: #fef2f2;
+    --error-fg: #991b1b;
 }
 
 * {
@@ -38,6 +42,72 @@ body {
 
 main {
     padding: 1rem;
+}
+
+.generate-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.generate-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: #374151;
+}
+
+.generate-form input {
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    width: 8rem;
+}
+
+.generate-form button {
+    padding: 0.55rem 1.1rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--header-bg);
+    color: var(--header-fg);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.generate-form button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.status-message {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.status-message.success {
+    background: var(--success-bg);
+    color: var(--success-fg);
+}
+
+.status-message.error {
+    background: var(--error-bg);
+    color: var(--error-fg);
+}
+
+.uncovered-list {
+    margin: 0 0 1rem;
+    padding: 0.6rem 1.5rem;
+    border-radius: 6px;
+    background: var(--error-bg);
+    color: var(--error-fg);
+    font-size: 0.85rem;
 }
 
 .schedule-wrapper {
