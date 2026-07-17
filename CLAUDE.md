@@ -166,6 +166,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
 - [x] T1.5 — `GlobalExceptionHandler` + respuesta de error uniforme
 - [x] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
+- [ ] T1.7 — CRUD parcial de Venue (`GET`/`PUT`, sin alta/baja): leer y editar nombre y horario de apertura/cierre
 
 ### Fase 2 — El núcleo
 - [x] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
@@ -184,6 +185,8 @@ Marca las casillas al completar. Una tarea, un commit.
 - [ ] T3.4 — Publicar cuadrante (`DRAFT` → `PUBLISHED`, bloquea edición)
 - [ ] T3.5 — Vista del empleado: mi semana + gestionar mis preferencias
 - [ ] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)
+- [x] T3.7 — Mostrar horas de entrada/salida de cada turno en el cuadrante semanal
+- [ ] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
 
 ### Fase 4 — Salir al mercado
 - [ ] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`

@@ -110,7 +110,7 @@ function groupAssignmentsByEmployee(assignments) {
     return map;
 }
 
-function renderUncoveredSlots(root, uncoveredSlots, shiftTemplateNamesById) {
+function renderUncoveredSlots(root, uncoveredSlots, shiftTemplateLabelsById) {
     const list = root.getElementById("uncovered-list");
     list.innerHTML = "";
     if (!uncoveredSlots || uncoveredSlots.length === 0) {
@@ -118,9 +118,9 @@ function renderUncoveredSlots(root, uncoveredSlots, shiftTemplateNamesById) {
         return;
     }
     uncoveredSlots.forEach((slot) => {
-        const shiftName = shiftTemplateNamesById.get(slot.shiftTemplateId) || `turno #${slot.shiftTemplateId}`;
+        const shiftLabel = shiftTemplateLabelsById.get(slot.shiftTemplateId) || `turno #${slot.shiftTemplateId}`;
         const item = document.createElement("li");
-        item.textContent = `${slot.date} · ${shiftName} · faltan ${slot.missing}`;
+        item.textContent = `${slot.date} · ${shiftLabel} · faltan ${slot.missing}`;
         list.appendChild(item);
     });
     list.hidden = false;
@@ -137,23 +137,36 @@ function setStatusMessage(root, message, isError) {
     el.hidden = false;
 }
 
+/** "08:00:00" -> "08:00" */
+function formatTime(localTime) {
+    return localTime.slice(0, 5);
+}
+
+/** "MAÑANA" + [08:00-16:00] -> "MAÑANA · 08:00–16:00"; varios tramos se unen con " y ". */
+function formatShiftLabel(shiftTemplate) {
+    const segments = shiftTemplate.segments
+        .map((s) => `${formatTime(s.startTime)}–${formatTime(s.endTime)}`)
+        .join(" y ");
+    return `${shiftTemplate.name} · ${segments}`;
+}
+
 async function loadReferenceData(venueId) {
     const [employees, shiftTemplates] = await Promise.all([
         fetchJson("/api/employees"),
         fetchJson("/api/shift-templates")
     ]);
     const venueEmployees = employees.filter((e) => e.venueId === venueId && e.active);
-    const shiftTemplateNamesById = new Map(
-        shiftTemplates.filter((t) => t.venueId === venueId).map((t) => [t.id, t.name])
+    const shiftTemplateLabelsById = new Map(
+        shiftTemplates.filter((t) => t.venueId === venueId).map((t) => [t.id, formatShiftLabel(t)])
     );
-    return { venueEmployees, shiftTemplateNamesById };
+    return { venueEmployees, shiftTemplateLabelsById };
 }
 
 async function generateWeek(root, venueId, isoYear, isoWeek) {
     setStatusMessage(root, null);
     root.getElementById("uncovered-list").hidden = true;
 
-    const { venueEmployees, shiftTemplateNamesById } = await loadReferenceData(venueId);
+    const { venueEmployees, shiftTemplateLabelsById } = await loadReferenceData(venueId);
 
     const generation = await fetchJson("/api/schedules/generate", {
         method: "POST",
@@ -169,12 +182,12 @@ async function generateWeek(root, venueId, isoYear, isoWeek) {
         assignments: generation.assignments.map((a) => ({
             employeeId: a.employeeId,
             date: a.date,
-            shiftName: shiftTemplateNamesById.get(a.shiftTemplateId) || `turno #${a.shiftTemplateId}`
+            shiftName: shiftTemplateLabelsById.get(a.shiftTemplateId) || `turno #${a.shiftTemplateId}`
         }))
     };
 
     renderSchedule(root, week);
-    renderUncoveredSlots(root, generation.uncoveredSlots, shiftTemplateNamesById);
+    renderUncoveredSlots(root, generation.uncoveredSlots, shiftTemplateLabelsById);
 
     document.getElementById("venue-name").textContent = `Venue #${generation.venueId}`;
     document.getElementById("week-label").textContent =
