@@ -9,6 +9,7 @@ import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.EquityReportEntryResponse;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
+import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
 import com.generador.horarios.proyecto.schedule.dto.ShiftAssignmentResponse;
 import com.generador.horarios.proyecto.schedule.dto.UncoveredSlotResponse;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
@@ -177,6 +178,43 @@ public class ScheduleService {
                 : new ShiftAssignmentResponse(updated.getId(), updated.getEmployee().getId(),
                         updated.getShiftTemplate().getId(), updated.getDate());
         return new AssignmentEditResponse(assignmentResponse, softWarnings);
+    }
+
+    /**
+     * Publica un cuadrante DRAFT (bloquea su edición: editAssignment ya rechaza
+     * cualquier cambio si el estado no es DRAFT). Revalida toda la semana una
+     * última vez antes de publicar como red de seguridad final: generate() y
+     * editAssignment() ya garantizan que nada persistido viola una dura, pero
+     * publicar convierte el cuadrante en el documento que firma el encargado
+     * (sección 10 del CLAUDE.md), así que se vuelve a comprobar. Las blandas
+     * (huecos de cobertura) no bloquean, se devuelven como aviso.
+     */
+    @Transactional
+    public SchedulePublishResponse publish(Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Schedule no encontrado: " + scheduleId));
+        if (schedule.getStatus() != ScheduleStatus.DRAFT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede publicar un cuadrante en DRAFT (actual: " + schedule.getStatus() + ")");
+        }
+
+        LocalDate weekStart = deriveWeekStart(schedule.getIsoYear(), schedule.getIsoWeek());
+        List<ShiftAssignment> assignments = shiftAssignmentRepository.findByScheduleId(scheduleId);
+        List<Employee> venueEmployees = employeeRepository.findByVenueIdAndActiveTrue(schedule.getVenue().getId());
+        List<Preference> preferences = preferenceRepository.findByEmployeeIdIn(
+                venueEmployees.stream().map(Employee::getId).toList());
+        List<CoverageRequirement> coverageRequirements = coverageRequirementRepository.findByVenueId(schedule.getVenue().getId());
+
+        List<ConstraintViolation> violations = validateOrRejectHardViolations(
+                assignments, preferences, coverageRequirements, weekStart, "No se puede publicar: viola restricciones duras: ");
+
+        schedule.setStatus(ScheduleStatus.PUBLISHED);
+
+        List<String> softWarnings = violations.stream()
+                .filter(v -> v.severity() == Severity.SOFT)
+                .map(ConstraintViolation::message)
+                .toList();
+        return new SchedulePublishResponse(schedule.getId(), schedule.getStatus().name(), softWarnings);
     }
 
     /**

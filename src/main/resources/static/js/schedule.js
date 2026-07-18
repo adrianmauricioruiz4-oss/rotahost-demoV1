@@ -1,5 +1,8 @@
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+/** Metadatos del último cuadrante generado, para el botón de publicar y la cabecera. */
+let currentWeekMeta = null;
+
 async function fetchJson(url, options) {
     const response = await fetch(url, options);
     if (!response.ok) {
@@ -186,6 +189,18 @@ function setStatusMessage(root, message, isError) {
     el.hidden = false;
 }
 
+function updateWeekLabel(root, status) {
+    root.getElementById("week-label").textContent =
+        `Semana ISO ${currentWeekMeta.isoWeek} · ${currentWeekMeta.isoYear} — cuadrante #${currentWeekMeta.scheduleId} (${status})`;
+}
+
+/** Al publicar, el backend ya rechaza más ediciones (409); aquí solo lo reflejamos en la UI. */
+function lockScheduleForEditing(root) {
+    root.querySelectorAll(".shift-select").forEach((select) => {
+        select.disabled = true;
+    });
+}
+
 /** "08:00:00" -> "08:00" */
 function formatTime(localTime) {
     return localTime.slice(0, 5);
@@ -237,9 +252,13 @@ async function generateWeek(root, venueId, isoYear, isoWeek) {
     renderSchedule(root, week);
     renderUncoveredSlots(root, generation.uncoveredSlots, shiftTemplateLabelsById);
 
+    currentWeekMeta = { scheduleId: generation.scheduleId, isoYear: generation.isoYear, isoWeek: generation.isoWeek };
     document.getElementById("venue-name").textContent = `Venue #${generation.venueId}`;
-    document.getElementById("week-label").textContent =
-        `Semana ISO ${generation.isoWeek} · ${generation.isoYear} — cuadrante #${generation.scheduleId} (${generation.status})`;
+    updateWeekLabel(root, generation.status);
+
+    const publishButton = root.getElementById("publish-button");
+    publishButton.hidden = false;
+    publishButton.disabled = false;
 
     const hint = generation.uncoveredSlots.length > 0
         ? ` — ${generation.uncoveredSlots.length} hueco(s) sin cubrir, revisa antes de publicar`
@@ -266,6 +285,24 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             setStatusMessage(document, error.message, true);
         } finally {
+            button.disabled = false;
+        }
+    });
+
+    document.getElementById("publish-button").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+            const result = await fetchJson(`/api/schedules/${currentWeekMeta.scheduleId}/publish`, { method: "POST" });
+            lockScheduleForEditing(document);
+            updateWeekLabel(document, result.status);
+            button.hidden = true;
+
+            const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
+            const warningText = hasWarnings ? ` Aviso: ${result.softWarnings.join("; ")}` : "";
+            setStatusMessage(document, `Cuadrante publicado.${warningText}`, hasWarnings);
+        } catch (error) {
+            setStatusMessage(document, error.message, true);
             button.disabled = false;
         }
     });

@@ -4,6 +4,7 @@ import com.generador.horarios.proyecto.schedule.dto.AssignmentEditResponse;
 import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
+import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,5 +35,10 @@ public class ScheduleController {
     public AssignmentEditResponse editAssignment(
             @PathVariable Long scheduleId, @Valid @RequestBody EditAssignmentRequest request) {
         return scheduleService.editAssignment(scheduleId, request);
+    }
+
+    @PostMapping("/{scheduleId}/publish")
+    public SchedulePublishResponse publish(@PathVariable Long scheduleId) {
+        return scheduleService.publish(scheduleId);
     }
 }

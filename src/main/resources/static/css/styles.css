@@ -105,6 +105,10 @@ main {
     cursor: default;
 }
 
+.publish-button {
+    background: var(--success-fg);
+}
+
 .status-message {
     margin: 0 0 1rem;
     padding: 0.6rem 0.9rem;

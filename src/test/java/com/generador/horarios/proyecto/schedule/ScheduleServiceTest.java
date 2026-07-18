@@ -17,6 +17,7 @@ import com.generador.horarios.proyecto.schedule.dto.AssignmentEditResponse;
 import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
+import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
 import com.generador.horarios.proyecto.schedule.engine.GenerationResult;
 import com.generador.horarios.proyecto.schedule.engine.ScheduleGenerator;
@@ -391,5 +392,86 @@ class ScheduleServiceTest {
         assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("no pertenece al venue");
+    }
+
+    @Test
+    void publishesDraftScheduleWhenNoHardViolations() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+        ShiftAssignment assignment = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of(assignment));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+
+        SchedulePublishResponse response = scheduleService.publish(900L);
+
+        assertThat(response.scheduleId()).isEqualTo(900L);
+        assertThat(response.status()).isEqualTo("PUBLISHED");
+        assertThat(response.softWarnings()).isEmpty();
+        assertThat(schedule.getStatus()).isEqualTo(ScheduleStatus.PUBLISHED);
+    }
+
+    @Test
+    void publishReturnsSoftWarningsButStillPublishes() {
+        Schedule schedule = draftSchedule(2026, 29);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of());
+        when(preferenceRepository.findByEmployeeIdIn(List.of())).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+
+        ConstraintViolation softViolation = new ConstraintViolation("H7", Severity.SOFT, "cobertura insuficiente", null, null);
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of(softViolation));
+
+        SchedulePublishResponse response = scheduleService.publish(900L);
+
+        assertThat(response.status()).isEqualTo("PUBLISHED");
+        assertThat(response.softWarnings()).containsExactly("cobertura insuficiente");
+    }
+
+    @Test
+    void publishRejectsHardViolationAndLeavesScheduleAsDraft() {
+        Schedule schedule = draftSchedule(2026, 29);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of());
+        when(preferenceRepository.findByEmployeeIdIn(List.of())).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+
+        ConstraintViolation hardViolation = new ConstraintViolation("H1", Severity.HARD, "descanso insuficiente", 10L, LocalDate.of(2026, 7, 13));
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of(hardViolation));
+
+        assertThatThrownBy(() -> scheduleService.publish(900L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("descanso insuficiente");
+
+        assertThat(schedule.getStatus()).isEqualTo(ScheduleStatus.DRAFT);
+    }
+
+    @Test
+    void publishRejectsWhenScheduleAlreadyPublished() {
+        Schedule schedule = draftSchedule(2026, 29);
+        schedule.setStatus(ScheduleStatus.PUBLISHED);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> scheduleService.publish(900L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("DRAFT");
+    }
+
+    @Test
+    void publishRejectsWhenScheduleNotFound() {
+        when(scheduleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.publish(999L))
+                .isInstanceOf(ResponseStatusException.class);
     }
 }
