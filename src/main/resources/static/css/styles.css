@@ -3,9 +3,6 @@
     --header-bg: #1f2937;
     --header-fg: #f9fafb;
     --row-alt-bg: #f3f4f6;
-    --cell-empty-fg: #9ca3af;
-    --shift-bg: #e0e7ff;
-    --shift-fg: #3730a3;
     --success-bg: #ecfdf5;
     --success-fg: #065f46;
     --error-bg: #fef2f2;
@@ -183,22 +180,23 @@ main {
     background: var(--row-alt-bg);
 }
 
-.shift-cell {
-    display: inline-block;
-    padding: 0.15rem 0.6rem;
+.shift-select {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    white-space: nowrap;
-    background: var(--shift-bg);
-    color: var(--shift-fg);
+    font-size: 0.85rem;
+    background: #ffffff;
+    color: #111827;
 }
 
-.shift-cell.empty {
-    background: none;
-    color: var(--cell-empty-fg);
-    font-weight: 400;
-    padding-left: 0;
+.shift-select:disabled {
+    opacity: 0.6;
+}
+
+.shift-select.shift-select-error {
+    border-color: var(--error-fg);
+    background: var(--error-bg);
+    color: var(--error-fg);
 }
 
 @media (max-width: 640px) {

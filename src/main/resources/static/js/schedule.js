@@ -85,13 +85,8 @@ function renderSchedule(root, week) {
         const employeeAssignments = assignmentsByEmployee.get(employee.id) || new Map();
         week.days.forEach((day) => {
             const cell = document.createElement("td");
-            const shiftName = employeeAssignments.get(day.date);
-
-            const badge = document.createElement("span");
-            badge.className = shiftName ? "shift-cell" : "shift-cell empty";
-            badge.textContent = shiftName || "—";
-            cell.appendChild(badge);
-
+            const currentShiftTemplateId = employeeAssignments.get(day.date) || null;
+            cell.appendChild(buildAssignmentSelect(root, week, employee.id, day.date, currentShiftTemplateId));
             row.appendChild(cell);
         });
 
@@ -105,9 +100,63 @@ function groupAssignmentsByEmployee(assignments) {
         if (!map.has(assignment.employeeId)) {
             map.set(assignment.employeeId, new Map());
         }
-        map.get(assignment.employeeId).set(assignment.date, assignment.shiftName);
+        map.get(assignment.employeeId).set(assignment.date, assignment.shiftTemplateId);
     });
     return map;
+}
+
+/** Cada celda es un <select>: elegir un turno lo asigna, "—" lo quita. */
+function buildAssignmentSelect(root, week, employeeId, date, currentShiftTemplateId) {
+    const select = document.createElement("select");
+    select.className = "shift-select";
+
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "—";
+    select.appendChild(emptyOption);
+
+    week.shiftTemplates.forEach((shiftTemplate) => {
+        const option = document.createElement("option");
+        option.value = String(shiftTemplate.id);
+        option.textContent = shiftTemplate.label;
+        select.appendChild(option);
+    });
+
+    select.value = currentShiftTemplateId ? String(currentShiftTemplateId) : "";
+    select.dataset.previousValue = select.value;
+
+    select.addEventListener("change", () => handleAssignmentChange(root, week, employeeId, date, select));
+    return select;
+}
+
+/**
+ * Revalida al vuelo contra PUT /api/schedules/{id}/assignments. Si la edición
+ * rompe una restricción dura, el backend la rechaza (422): se revierte el
+ * <select> a su valor anterior y se marca en rojo.
+ */
+async function handleAssignmentChange(root, week, employeeId, date, select) {
+    select.classList.remove("shift-select-error");
+    const previousValue = select.dataset.previousValue;
+    const newShiftTemplateId = select.value ? Number(select.value) : null;
+    select.disabled = true;
+
+    try {
+        const result = await fetchJson(`/api/schedules/${week.scheduleId}/assignments`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ employeeId, date, shiftTemplateId: newShiftTemplateId })
+        });
+        select.dataset.previousValue = select.value;
+        const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
+        const warningText = hasWarnings ? ` Aviso: ${result.softWarnings.join("; ")}` : "";
+        setStatusMessage(root, `Turno actualizado.${warningText}`, hasWarnings);
+    } catch (error) {
+        select.value = previousValue;
+        select.classList.add("shift-select-error");
+        setStatusMessage(root, error.message, true);
+    } finally {
+        select.disabled = false;
+    }
 }
 
 function renderUncoveredSlots(root, uncoveredSlots, shiftTemplateLabelsById) {
@@ -151,22 +200,21 @@ function formatShiftLabel(shiftTemplate) {
 }
 
 async function loadReferenceData(venueId) {
-    const [employees, shiftTemplates] = await Promise.all([
+    const [employees, allShiftTemplates] = await Promise.all([
         fetchJson("/api/employees"),
         fetchJson("/api/shift-templates")
     ]);
     const venueEmployees = employees.filter((e) => e.venueId === venueId && e.active);
-    const shiftTemplateLabelsById = new Map(
-        shiftTemplates.filter((t) => t.venueId === venueId).map((t) => [t.id, formatShiftLabel(t)])
-    );
-    return { venueEmployees, shiftTemplateLabelsById };
+    const shiftTemplates = allShiftTemplates.filter((t) => t.venueId === venueId);
+    return { venueEmployees, shiftTemplates };
 }
 
 async function generateWeek(root, venueId, isoYear, isoWeek) {
     setStatusMessage(root, null);
     root.getElementById("uncovered-list").hidden = true;
 
-    const { venueEmployees, shiftTemplateLabelsById } = await loadReferenceData(venueId);
+    const { venueEmployees, shiftTemplates } = await loadReferenceData(venueId);
+    const shiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
 
     const generation = await fetchJson("/api/schedules/generate", {
         method: "POST",
@@ -175,15 +223,15 @@ async function generateWeek(root, venueId, isoYear, isoWeek) {
     });
 
     const week = {
-        isoYear: generation.isoYear,
-        isoWeek: generation.isoWeek,
+        scheduleId: generation.scheduleId,
         days: buildWeekDays(generation.isoYear, generation.isoWeek),
         employees: venueEmployees.map((e) => ({ id: e.id, name: e.name })),
         assignments: generation.assignments.map((a) => ({
             employeeId: a.employeeId,
             date: a.date,
-            shiftName: shiftTemplateLabelsById.get(a.shiftTemplateId) || `turno #${a.shiftTemplateId}`
-        }))
+            shiftTemplateId: a.shiftTemplateId
+        })),
+        shiftTemplates: shiftTemplates.map((t) => ({ id: t.id, label: shiftTemplateLabelsById.get(t.id) }))
     };
 
     renderSchedule(root, week);

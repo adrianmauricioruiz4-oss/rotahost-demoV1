@@ -181,7 +181,7 @@ Marca las casillas al completar. Una tarea, un commit.
 ### Fase 3 — Interfaz
 - [x] T3.1 — Vista cuadrante semanal (tabla días × empleados), CSS propio, responsive
 - [x] T3.2 — Botón "Generar semana" → pinta el DRAFT
-- [ ] T3.3 — **Edición manual**: cambiar una asignación revalida al vuelo y avisa en rojo si rompe una dura
+- [x] T3.3 — **Edición manual**: cambiar una asignación revalida al vuelo y avisa en rojo si rompe una dura
 - [ ] T3.4 — Publicar cuadrante (`DRAFT` → `PUBLISHED`, bloquea edición)
 - [ ] T3.5 — Vista del empleado: mi semana + gestionar mis preferencias
 - [ ] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)

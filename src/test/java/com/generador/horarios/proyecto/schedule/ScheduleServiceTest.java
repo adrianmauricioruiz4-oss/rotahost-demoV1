@@ -13,6 +13,8 @@ import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
 import com.generador.horarios.proyecto.employee.EmployeeRepository;
 import com.generador.horarios.proyecto.preference.PreferenceRepository;
+import com.generador.horarios.proyecto.schedule.dto.AssignmentEditResponse;
+import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
@@ -24,6 +26,7 @@ import com.generador.horarios.proyecto.shift.ShiftAssignment;
 import com.generador.horarios.proyecto.shift.ShiftAssignmentRepository;
 import com.generador.horarios.proyecto.shift.ShiftSegment;
 import com.generador.horarios.proyecto.shift.ShiftTemplate;
+import com.generador.horarios.proyecto.shift.ShiftTemplateRepository;
 import com.generador.horarios.proyecto.venue.CoverageRequirementRepository;
 import com.generador.horarios.proyecto.venue.Venue;
 import com.generador.horarios.proyecto.venue.VenueRepository;
@@ -64,6 +67,9 @@ class ScheduleServiceTest {
     private ShiftAssignmentRepository shiftAssignmentRepository;
 
     @Mock
+    private ShiftTemplateRepository shiftTemplateRepository;
+
+    @Mock
     private ScheduleGenerator scheduleGenerator;
 
     @Mock
@@ -72,18 +78,28 @@ class ScheduleServiceTest {
     private ScheduleService scheduleService;
     private Venue venue;
     private ShiftTemplate manana;
+    private ShiftTemplate tarde;
 
     @BeforeEach
     void setUp() {
         scheduleService = new ScheduleService(scheduleRepository, venueRepository, employeeRepository,
                 coverageRequirementRepository, preferenceRepository, shiftAssignmentRepository,
-                scheduleGenerator, scheduleValidator);
+                shiftTemplateRepository, scheduleGenerator, scheduleValidator);
 
         venue = new Venue("Bar Test", LocalTime.of(8, 0), LocalTime.of(2, 0));
         ReflectionTestUtils.setField(venue, "id", 1L);
 
         manana = new ShiftTemplate("MAÑANA", venue, List.of(new ShiftSegment(LocalTime.of(8, 0), LocalTime.of(16, 0))));
         ReflectionTestUtils.setField(manana, "id", 100L);
+
+        tarde = new ShiftTemplate("TARDE", venue, List.of(new ShiftSegment(LocalTime.of(16, 0), LocalTime.MIDNIGHT)));
+        ReflectionTestUtils.setField(tarde, "id", 101L);
+    }
+
+    private Schedule draftSchedule(int isoYear, int isoWeek) {
+        Schedule schedule = new Schedule(venue, isoYear, isoWeek);
+        ReflectionTestUtils.setField(schedule, "id", 900L);
+        return schedule;
     }
 
     @Test
@@ -194,5 +210,186 @@ class ScheduleServiceTest {
         assertThat(weekStart.getDayOfWeek()).isEqualTo(DayOfWeek.MONDAY);
         assertThat(weekStart.get(IsoFields.WEEK_BASED_YEAR)).isEqualTo(2026);
         assertThat(weekStart.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)).isEqualTo(29);
+    }
+
+    @Test
+    void editAssignmentReplacesExistingAssignmentWhenNoHardViolations() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+        ShiftAssignment existing = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
+        ReflectionTestUtils.setField(existing, "id", 500L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 101L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of(existing));
+        when(shiftTemplateRepository.findById(101L)).thenReturn(Optional.of(tarde));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+        when(shiftAssignmentRepository.save(any(ShiftAssignment.class))).thenAnswer(invocation -> {
+            ShiftAssignment saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 600L);
+            return saved;
+        });
+
+        AssignmentEditResponse response = scheduleService.editAssignment(900L, request);
+
+        assertThat(response.assignment()).isNotNull();
+        assertThat(response.assignment().id()).isEqualTo(600L);
+        assertThat(response.assignment().shiftTemplateId()).isEqualTo(101L);
+        assertThat(response.softWarnings()).isEmpty();
+        verify(shiftAssignmentRepository).delete(existing);
+        verify(shiftAssignmentRepository).save(any(ShiftAssignment.class));
+    }
+
+    @Test
+    void editAssignmentRemovesAssignmentWhenShiftTemplateIdIsNull() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+        ShiftAssignment existing = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
+        ReflectionTestUtils.setField(existing, "id", 500L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), null);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of(existing));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+
+        AssignmentEditResponse response = scheduleService.editAssignment(900L, request);
+
+        assertThat(response.assignment()).isNull();
+        verify(shiftAssignmentRepository).delete(existing);
+        verify(shiftAssignmentRepository, never()).save(any());
+        verify(shiftTemplateRepository, never()).findById(any());
+    }
+
+    @Test
+    void editAssignmentAddsAssignmentToPreviouslyEmptySlot() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(manana));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+        when(shiftAssignmentRepository.save(any(ShiftAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AssignmentEditResponse response = scheduleService.editAssignment(900L, request);
+
+        assertThat(response.assignment()).isNotNull();
+        assertThat(response.assignment().shiftTemplateId()).isEqualTo(100L);
+        verify(shiftAssignmentRepository, never()).delete(any());
+    }
+
+    @Test
+    void editAssignmentRejectsHardViolationAndPersistsNothing() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(manana));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+
+        ConstraintViolation hardViolation = new ConstraintViolation("H5", Severity.HARD, "no disponible", 10L, LocalDate.of(2026, 7, 13));
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of(hardViolation));
+
+        assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("no disponible");
+
+        verify(shiftAssignmentRepository, never()).delete(any());
+        verify(shiftAssignmentRepository, never()).save(any());
+    }
+
+    @Test
+    void editAssignmentReturnsSoftWarningsWithoutBlockingTheSave() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(manana));
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+
+        ConstraintViolation softViolation = new ConstraintViolation("H7", Severity.SOFT, "cobertura insuficiente", null, null);
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of(softViolation));
+        when(shiftAssignmentRepository.save(any(ShiftAssignment.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AssignmentEditResponse response = scheduleService.editAssignment(900L, request);
+
+        assertThat(response.assignment()).isNotNull();
+        assertThat(response.softWarnings()).containsExactly("cobertura insuficiente");
+    }
+
+    @Test
+    void editAssignmentRejectsWhenScheduleIsNotDraft() {
+        Schedule schedule = draftSchedule(2026, 29);
+        schedule.setStatus(ScheduleStatus.PUBLISHED);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("DRAFT");
+    }
+
+    @Test
+    void editAssignmentRejectsWhenDateIsOutsideTheScheduleWeek() {
+        Schedule schedule = draftSchedule(2026, 29);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 20), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+
+        assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("no pertenece a la semana");
+    }
+
+    @Test
+    void editAssignmentRejectsWhenEmployeeBelongsToAnotherVenue() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Venue otherVenue = new Venue("Otro Bar", LocalTime.of(8, 0), LocalTime.of(2, 0));
+        ReflectionTestUtils.setField(otherVenue, "id", 2L);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, otherVenue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+
+        assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("no pertenece al venue");
     }
 }
