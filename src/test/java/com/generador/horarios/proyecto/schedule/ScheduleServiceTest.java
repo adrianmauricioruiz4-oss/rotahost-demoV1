@@ -18,6 +18,7 @@ import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
 import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
+import com.generador.horarios.proyecto.schedule.dto.ScheduleResponse;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
 import com.generador.horarios.proyecto.schedule.engine.GenerationResult;
 import com.generador.horarios.proyecto.schedule.engine.ScheduleGenerator;
@@ -472,6 +473,43 @@ class ScheduleServiceTest {
         when(scheduleRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> scheduleService.publish(999L))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void findByVenueAndWeekReturnsExistingScheduleWithItsAssignments() {
+        Schedule schedule = draftSchedule(2026, 29);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+        ShiftAssignment assignment = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
+        ReflectionTestUtils.setField(assignment, "id", 500L);
+
+        when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
+        when(scheduleRepository.findByVenueIdAndIsoYearAndIsoWeek(1L, 2026, 29)).thenReturn(Optional.of(schedule));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of(assignment));
+
+        ScheduleResponse response = scheduleService.findByVenueAndWeek(1L, 2026, 29);
+
+        assertThat(response.scheduleId()).isEqualTo(900L);
+        assertThat(response.status()).isEqualTo("DRAFT");
+        assertThat(response.assignments()).hasSize(1);
+        assertThat(response.assignments().get(0).employeeId()).isEqualTo(10L);
+    }
+
+    @Test
+    void findByVenueAndWeekRejectsWhenNoScheduleExistsForThatWeek() {
+        when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
+        when(scheduleRepository.findByVenueIdAndIsoYearAndIsoWeek(1L, 2026, 29)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.findByVenueAndWeek(1L, 2026, 29))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void findByVenueAndWeekRejectsWhenVenueNotFound() {
+        when(venueRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.findByVenueAndWeek(99L, 2026, 29))
                 .isInstanceOf(ResponseStatusException.class);
     }
 }

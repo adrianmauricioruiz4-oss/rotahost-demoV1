@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnos — Mi semana</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Mi semana</h1>
+        <p class="app-nav"><a href="index.html">← Volver al cuadrante</a></p>
+    </header>
+
+    <main>
+        <p id="status-message" class="status-message" hidden></p>
+
+        <section class="settings-section">
+            <form id="lookup-form" class="generate-form">
+                <label>
+                    Employee ID
+                    <input type="number" id="employee-id-input" min="1" value="1" required>
+                </label>
+                <label>
+                    Año ISO
+                    <input type="number" id="iso-year-input" min="2000" required>
+                </label>
+                <label>
+                    Semana ISO
+                    <input type="number" id="iso-week-input" min="1" max="53" required>
+                </label>
+                <button type="submit">Ver mi semana</button>
+            </form>
+        </section>
+
+        <section class="settings-section">
+            <h2 id="employee-heading" hidden></h2>
+            <div class="schedule-wrapper">
+                <table id="week-table" class="schedule-table">
+                    <thead>
+                        <tr id="week-head-row"></tr>
+                    </thead>
+                    <tbody>
+                        <tr id="week-body-row"></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="settings-section">
+            <h2>Mis preferencias</h2>
+            <ul id="preferences-list" class="preferences-list"></ul>
+
+            <form id="preference-form" class="generate-form">
+                <fieldset id="preference-fieldset" disabled>
+                    <label>
+                        Tipo
+                        <select id="pref-type-input">
+                            <option value="PREFERS_DAY">Prefiero un día</option>
+                            <option value="AVOIDS_DAY">Evito un día</option>
+                            <option value="PREFERS_SHIFT">Prefiero un turno</option>
+                            <option value="AVOIDS_SHIFT">Evito un turno</option>
+                            <option value="UNAVAILABLE">No disponible (fecha concreta)</option>
+                        </select>
+                    </label>
+                    <label id="pref-day-field">
+                        Día de la semana
+                        <select id="pref-day-input">
+                            <option value="MONDAY">Lunes</option>
+                            <option value="TUESDAY">Martes</option>
+                            <option value="WEDNESDAY">Miércoles</option>
+                            <option value="THURSDAY">Jueves</option>
+                            <option value="FRIDAY">Viernes</option>
+                            <option value="SATURDAY">Sábado</option>
+                            <option value="SUNDAY">Domingo</option>
+                        </select>
+                    </label>
+                    <label id="pref-shift-field" hidden>
+                        Turno
+                        <select id="pref-shift-input"></select>
+                    </label>
+                    <label id="pref-date-field" hidden>
+                        Fecha
+                        <input type="date" id="pref-date-input">
+                    </label>
+                    <label id="pref-weight-field">
+                        Peso (1-5)
+                        <input type="number" id="pref-weight-input" min="1" max="5" value="3">
+                    </label>
+                    <button type="submit">Añadir preferencia</button>
+                </fieldset>
+            </form>
+            <p id="preference-hint" class="status-message">Consulta tu semana para poder añadir preferencias.</p>
+        </section>
+    </main>
+
+    <script src="js/employee.js"></script>
+</body>
+</html>

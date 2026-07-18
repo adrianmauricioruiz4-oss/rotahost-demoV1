@@ -10,6 +10,7 @@ import com.generador.horarios.proyecto.schedule.dto.EquityReportEntryResponse;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
 import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
+import com.generador.horarios.proyecto.schedule.dto.ScheduleResponse;
 import com.generador.horarios.proyecto.schedule.dto.ShiftAssignmentResponse;
 import com.generador.horarios.proyecto.schedule.dto.UncoveredSlotResponse;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
@@ -75,6 +76,27 @@ public class ScheduleService {
         this.shiftTemplateRepository = shiftTemplateRepository;
         this.scheduleGenerator = scheduleGenerator;
         this.scheduleValidator = scheduleValidator;
+    }
+
+    /**
+     * Lee un cuadrante ya generado (no crea nada). Lo usa la vista del empleado
+     * (T3.5) para ver su semana sin depender del scheduleId, que no conoce.
+     */
+    @Transactional(readOnly = true)
+    public ScheduleResponse findByVenueAndWeek(Long venueId, int isoYear, int isoWeek) {
+        venueRepository.findById(venueId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Venue no encontrado: " + venueId));
+        Schedule schedule = scheduleRepository.findByVenueIdAndIsoYearAndIsoWeek(venueId, isoYear, isoWeek)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No hay cuadrante generado para el venue " + venueId + " en " + isoYear + "-W" + isoWeek));
+
+        List<ShiftAssignmentResponse> assignments = shiftAssignmentRepository.findByScheduleId(schedule.getId()).stream()
+                .map(a -> new ShiftAssignmentResponse(a.getId(), a.getEmployee().getId(), a.getShiftTemplate().getId(), a.getDate()))
+                .toList();
+
+        return new ScheduleResponse(
+                schedule.getId(), schedule.getVenue().getId(), schedule.getIsoYear(), schedule.getIsoWeek(),
+                schedule.getStatus().name(), assignments);
     }
 
     @Transactional
