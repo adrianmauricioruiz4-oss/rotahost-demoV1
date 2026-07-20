@@ -3,52 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Turnos — Cuadrante semanal</title>
+    <title>Turnos · Cuadrante</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1 id="venue-name">Turnos</h1>
-        <p id="week-label">Genera un cuadrante para ver el DRAFT aquí.</p>
-        <p class="app-nav">
-            <a href="settings.html">Configuración del local y los turnos</a>
-            · <a href="employee.html">Mi semana y mis preferencias</a>
-        </p>
-    </header>
+    <div class="app">
+        <aside class="sidebar" id="shell-sidebar"></aside>
 
-    <main>
-        <form id="generate-form" class="generate-form">
-            <label>
-                Venue ID
-                <input type="number" id="venue-id-input" min="1" value="1" required>
-            </label>
-            <label>
-                Año ISO
-                <input type="number" id="iso-year-input" min="2000" required>
-            </label>
-            <label>
-                Semana ISO
-                <input type="number" id="iso-week-input" min="1" max="53" required>
-            </label>
-            <button type="submit" id="generate-button">Generar semana</button>
-            <button type="button" id="publish-button" class="publish-button" hidden>Publicar cuadrante</button>
-        </form>
+        <div class="main">
+            <div class="topbar">
+                <label class="field-compact">
+                    Venue
+                    <input type="number" id="venue-id-input" min="1" value="1">
+                </label>
 
-        <p id="status-message" class="status-message" hidden></p>
-        <ul id="uncovered-list" class="uncovered-list" hidden></ul>
+                <div class="week-nav">
+                    <button class="wk-btn" id="wk-prev" type="button" aria-label="Semana anterior">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                    </button>
+                    <div class="week-label">
+                        <span class="wk-h">
+                            Semana
+                            <input type="number" id="iso-week-input" min="1" max="53" class="wk-input wk-input-week" aria-label="Semana ISO">
+                            ·
+                            <input type="number" id="iso-year-input" min="2000" class="wk-input wk-input-year" aria-label="Año ISO">
+                        </span>
+                        <span class="wk-sub" id="wk-sub"></span>
+                    </div>
+                    <button class="wk-btn" id="wk-next" type="button" aria-label="Semana siguiente">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+                    </button>
+                </div>
 
-        <div class="schedule-wrapper">
-            <table id="schedule-table" class="schedule-table">
-                <thead>
-                    <tr id="schedule-head-row">
-                        <th class="employee-col">Empleado</th>
-                    </tr>
-                </thead>
-                <tbody id="schedule-body"></tbody>
-            </table>
+                <span class="badge badge-draft" id="status-badge" hidden><span class="dot"></span><span id="status-txt">Borrador</span></span>
+
+                <div class="spring"></div>
+
+                <button class="btn btn-ghost" id="generate-button" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+                    Generar semana
+                </button>
+                <button class="btn btn-teal" id="publish-button" type="button" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                    Publicar
+                </button>
+            </div>
+
+            <div class="content">
+                <div class="head">
+                    <div>
+                        <h1>Cuadrante semanal</h1>
+                        <p id="board-sub">Elige un venue y una semana para ver o generar su cuadrante.</p>
+                    </div>
+                </div>
+
+                <div id="board-body" style="display:none">
+                    <div class="legend" id="legend"></div>
+
+                    <div class="board-grid">
+                        <div class="table-wrap" id="table-wrap">
+                            <table class="grid" id="schedule-table">
+                                <thead><tr id="schedule-head-row"></tr></thead>
+                                <tbody id="schedule-body"></tbody>
+                            </table>
+                        </div>
+
+                        <div>
+                            <div class="panel">
+                                <h3>Cobertura <span class="pill pill-warn" id="coverage-pill" hidden></span></h3>
+                                <div id="coverage-list"></div>
+                            </div>
+                            <div class="panel">
+                                <h3>Equidad de turnos duros</h3>
+                                <p class="panel-hint">Viernes/sábado noche y domingos, repartidos entre el equipo.</p>
+                                <div id="equity-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" id="empty-state">
+                    <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+                    <h2 id="empty-heading">Esta semana aún no tiene cuadrante</h2>
+                    <p>Genera una propuesta a partir de las preferencias del equipo y ajústala a mano antes de publicar.</p>
+                    <button class="btn btn-primary" id="empty-generate-button" type="button" style="margin:0 auto">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+                        Generar semana
+                    </button>
+                </div>
+            </div>
         </div>
-    </main>
+    </div>
 
+    <div class="pop" id="pop">
+        <div class="ph">Asignar turno</div>
+        <div id="pop-options"></div>
+    </div>
+
+    <script src="js/toast.js"></script>
+    <script src="js/shell.js"></script>
     <script src="js/schedule.js"></script>
 </body>
 </html>

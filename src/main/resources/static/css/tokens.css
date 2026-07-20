@@ -1,0 +1,81 @@
+/*
+ * Design tokens — extraídos de docs/prototipo.html (referencia visual del
+ * producto). Todo el CSS de la app consume estas variables; no debe haber
+ * valores hex ni px sueltos fuera de este fichero.
+ */
+:root {
+    /* ---------- color base ---------- */
+    --paper: #F1F2EE;
+    --surface: #FFFFFF;
+    --surface-2: #FAFAF7;
+    --ink: #17302E;
+    --ink-soft: #4B5F5C;
+    --ink-faint: #8494901a;
+    --line: #DFE3DC;
+    --line-strong: #C9D0C7;
+    --brand: #0F5257;
+    --brand-deep: #0A3B3F;
+    --brand-tint: #E3EEEC;
+    --accent: #E8A33D;
+    --accent-ink: #4A3308;
+    --danger: #C6413A;
+    --danger-bg: #FBE6E4;
+    --ok: #2F8A5B;
+    --ok-bg: #E3F1E8;
+
+    /* texto claro sobre fondo oscuro de marca (sidebar, header antiguo) */
+    --brand-fg: #EAF5F3;
+    --brand-fg-soft: #B7CFCD;
+
+    /* ---------- color de turnos: firma visual del cuadrante ---------- */
+    --m-bg: #FCE9C4; --m-line: #E7C079; --m-ink: #7A5310; /* Mañana */
+    --t-bg: #DBE3F6; --t-line: #A6BAE8; --t-ink: #2E3E6B; /* Tarde */
+    --p-bg: #ECDFF1; --p-line: #CBA6D6; --p-ink: #6A3D72; /* Partido */
+    --l-bg: #E7EAE4; --l-line: #CBD2C9; --l-ink: #59645E; /* Libre */
+    /* turno con nombre distinto a Mañana/Tarde/Partido (ShiftTemplate es
+       configurable por venue, así que no todos los turnos encajan en M/T/P) */
+    --n-bg: #EFEAE0; --n-line: #D6CBB5; --n-ink: #6B5A38;
+
+    /* ---------- radios y sombra ---------- */
+    --r: 14px;
+    --r-sm: 9px;
+    --shadow: 0 1px 2px rgba(20, 40, 38, .05), 0 8px 24px -14px rgba(20, 40, 38, .22);
+    --shadow-pop: 0 12px 40px -12px rgba(20, 40, 38, .35);
+
+    /* ---------- tipografía ---------- */
+    --font-display: "Bricolage Grotesque", Inter, sans-serif;
+    --font-body: Inter, system-ui, sans-serif;
+    --fs-xs: 11px;
+    --fs-sm: 12.5px;
+    --fs-base: 13.5px;
+    --fs-md: 15px;
+    --fs-lg: 16px;
+    --fs-xl: 19px;
+    --fs-2xl: 24px;
+
+    /* ---------- espaciado ---------- */
+    --space-1: 4px;
+    --space-2: 6px;
+    --space-3: 8px;
+    --space-4: 10px;
+    --space-5: 12px;
+    --space-6: 14px;
+    --space-7: 16px;
+    --space-8: 18px;
+    --space-9: 20px;
+    --space-10: 22px;
+    --space-11: 26px;
+
+    /* ---------- movimiento ---------- */
+    --transition-fast: .12s;
+    --transition-base: .15s;
+    --transition-slow: .25s;
+
+    /* ---------- z-index ---------- */
+    --z-sticky-col: 2;
+    --z-sticky-head: 3;
+    --z-sticky-head-col: 4;
+    --z-topbar: 20;
+    --z-popover: 100;
+    --z-toast: 200;
+}

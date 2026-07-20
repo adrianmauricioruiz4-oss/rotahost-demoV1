@@ -1,7 +1,23 @@
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const WEEKEND_INDEXES = [4, 5, 6];
+const MONTH_LABELS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+/** Paleta categórica para diferenciar personas en los avatares (no es semántica de turno, no va en tokens.css). */
+const AVATAR_COLORS = ["#0F5257", "#C0673F", "#3B6EA5", "#8B5A8C", "#2F8A5B", "#B4842B", "#4A5568", "#A03A4E", "#2C7A7B", "#6B4E9E"];
 
-/** Metadatos del último cuadrante generado, para el botón de publicar y la cabecera. */
-let currentWeekMeta = null;
+let currentVenueId = null;
+let currentIsoYear = null;
+let currentIsoWeek = null;
+let currentScheduleId = null;
+let currentScheduleStatus = null;
+let currentEmployees = [];
+let currentShiftTemplates = [];
+let currentDays = [];
+let assignmentsByEmployeeDate = new Map();
+let unavailableSet = new Set();
+/** null = no se han recalculado desde la última vez que se generó (ver GET /api/schedules). */
+let currentUncoveredSlots = null;
+let currentEquityReport = null;
+let popTarget = null;
 
 async function fetchJson(url, options) {
     const response = await fetch(url, options);
@@ -23,7 +39,8 @@ async function fetchJson(url, options) {
     return response.json();
 }
 
-/** Lunes de la semana ISO indicada, calculado sin depender de la fecha actual. */
+/* ---------- fechas ---------- */
+
 function mondayOfIsoWeek(isoYear, isoWeek) {
     const jan4 = new Date(Date.UTC(isoYear, 0, 4));
     const jan4Weekday = (jan4.getUTCDay() + 6) % 7; // 0 = lunes
@@ -44,15 +61,13 @@ function buildWeekDays(isoYear, isoWeek) {
     for (let i = 0; i < 7; i++) {
         const date = new Date(monday);
         date.setUTCDate(monday.getUTCDate() + i);
-        const isoDate = toIsoDateString(date);
-        days.push({ date: isoDate, label: `${DAY_LABELS[i]} ${date.getUTCDate()}` });
+        days.push({ date: toIsoDateString(date), label: `${DAY_LABELS[i]} ${date.getUTCDate()}` });
     }
     return days;
 }
 
-function currentIsoYearWeek() {
-    const now = new Date();
-    const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+function isoYearWeekOfDate(inputDate) {
+    const target = new Date(Date.UTC(inputDate.getUTCFullYear(), inputDate.getUTCMonth(), inputDate.getUTCDate()));
     const dayNumber = (target.getUTCDay() + 6) % 7;
     target.setUTCDate(target.getUTCDate() - dayNumber + 3);
     const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
@@ -62,42 +77,89 @@ function currentIsoYearWeek() {
     return { isoYear: target.getUTCFullYear(), isoWeek };
 }
 
-function renderSchedule(root, week) {
-    const headRow = root.getElementById("schedule-head-row");
-    const body = root.getElementById("schedule-body");
-
-    headRow.querySelectorAll(".day-col").forEach((el) => el.remove());
-    week.days.forEach((day) => {
-        const th = document.createElement("th");
-        th.className = "day-col";
-        th.textContent = day.label;
-        headRow.appendChild(th);
-    });
-
-    body.innerHTML = "";
-    const assignmentsByEmployee = groupAssignmentsByEmployee(week.assignments);
-
-    week.employees.forEach((employee) => {
-        const row = document.createElement("tr");
-
-        const nameCell = document.createElement("td");
-        nameCell.className = "employee-col";
-        nameCell.textContent = employee.name;
-        row.appendChild(nameCell);
-
-        const employeeAssignments = assignmentsByEmployee.get(employee.id) || new Map();
-        week.days.forEach((day) => {
-            const cell = document.createElement("td");
-            const currentShiftTemplateId = employeeAssignments.get(day.date) || null;
-            cell.appendChild(buildAssignmentSelect(root, week, employee.id, day.date, currentShiftTemplateId));
-            row.appendChild(cell);
-        });
-
-        body.appendChild(row);
-    });
+function currentIsoYearWeek() {
+    return isoYearWeekOfDate(new Date());
 }
 
-function groupAssignmentsByEmployee(assignments) {
+function formatDateRangeLabel(days) {
+    const first = new Date(`${days[0].date}T00:00:00Z`);
+    const last = new Date(`${days[days.length - 1].date}T00:00:00Z`);
+    const firstMonth = MONTH_LABELS[first.getUTCMonth()];
+    const lastMonth = MONTH_LABELS[last.getUTCMonth()];
+    const year = last.getUTCFullYear();
+    if (first.getUTCMonth() === last.getUTCMonth()) {
+        return `${first.getUTCDate()} – ${last.getUTCDate()} ${lastMonth} ${year}`;
+    }
+    return `${first.getUTCDate()} ${firstMonth} – ${last.getUTCDate()} ${lastMonth} ${year}`;
+}
+
+/* ---------- formato de turnos ---------- */
+
+function formatTime(localTime) {
+    return localTime.slice(0, 5);
+}
+
+/** "08:00-16:00" -> "08–16"; varios tramos (partido) -> "12·20" (hora de inicio de cada tramo). */
+function formatSegmentsShort(segments) {
+    if (!segments || segments.length === 0) return "";
+    if (segments.length === 1) {
+        return `${formatTime(segments[0].startTime)}–${formatTime(segments[0].endTime)}`;
+    }
+    return segments.map((s) => formatTime(s.startTime).slice(0, 2)).join("·");
+}
+
+function stripAccents(text) {
+    return text.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * ShiftTemplate es configurable por venue, así que no hay garantía de que un
+ * turno se llame "Mañana"/"Tarde"/"Partido". Los reconocemos por nombre para
+ * darles su color de firma; cualquier otro nombre usa el color neutro "n".
+ */
+function shiftColorClass(shiftTemplate) {
+    const name = stripAccents(shiftTemplate.name).toUpperCase();
+    if (name.includes("MANANA") || name.includes("MORNING")) return "m";
+    if (name.includes("TARDE") || name.includes("AFTERNOON")) return "t";
+    if (name.includes("PARTID") || name.includes("SPLIT")) return "p";
+    return "n";
+}
+
+function initials(name) {
+    return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+}
+
+function avatarColor(index) {
+    return AVATAR_COLORS[index % AVATAR_COLORS.length];
+}
+
+/* ---------- carga de datos ---------- */
+
+async function loadReferenceData(venueId) {
+    const [employees, allShiftTemplates] = await Promise.all([
+        fetchJson("/api/employees"),
+        fetchJson("/api/shift-templates")
+    ]);
+    return {
+        employees: employees.filter((e) => e.venueId === venueId && e.active),
+        shiftTemplates: allShiftTemplates.filter((t) => t.venueId === venueId)
+    };
+}
+
+/** Marca (empleado, fecha) como no disponible si hay una preferencia UNAVAILABLE para ese día. */
+async function loadUnavailableSet(employeeIds, weekDateSet) {
+    const allPreferences = await fetchJson("/api/preferences");
+    const employeeIdSet = new Set(employeeIds);
+    const set = new Set();
+    allPreferences.forEach((preference) => {
+        if (preference.type === "UNAVAILABLE" && employeeIdSet.has(preference.employeeId) && weekDateSet.has(preference.specificDate)) {
+            set.add(`${preference.employeeId},${preference.specificDate}`);
+        }
+    });
+    return set;
+}
+
+function groupAssignments(assignments) {
     const map = new Map();
     assignments.forEach((assignment) => {
         if (!map.has(assignment.employeeId)) {
@@ -108,202 +170,559 @@ function groupAssignmentsByEmployee(assignments) {
     return map;
 }
 
-/** Cada celda es un <select>: elegir un turno lo asigna, "—" lo quita. */
-function buildAssignmentSelect(root, week, employeeId, date, currentShiftTemplateId) {
-    const select = document.createElement("select");
-    select.className = "shift-select";
+/* ---------- inputs del topbar ---------- */
 
-    const emptyOption = document.createElement("option");
-    emptyOption.value = "";
-    emptyOption.textContent = "—";
-    select.appendChild(emptyOption);
+function getVenueId() {
+    return Number(document.getElementById("venue-id-input").value);
+}
 
-    week.shiftTemplates.forEach((shiftTemplate) => {
-        const option = document.createElement("option");
-        option.value = String(shiftTemplate.id);
-        option.textContent = shiftTemplate.label;
-        select.appendChild(option);
+function getIsoYear() {
+    return Number(document.getElementById("iso-year-input").value);
+}
+
+function getIsoWeek() {
+    return Number(document.getElementById("iso-week-input").value);
+}
+
+/* ---------- render: cabecera, leyenda, rejilla ---------- */
+
+function renderWeekLabel() {
+    document.getElementById("wk-sub").textContent = formatDateRangeLabel(currentDays);
+}
+
+function renderLegend() {
+    const legend = document.getElementById("legend");
+    legend.innerHTML = "";
+
+    currentShiftTemplates.forEach((shiftTemplate) => {
+        const item = document.createElement("span");
+        item.className = "lg";
+        const swatch = document.createElement("span");
+        swatch.className = `sw sw-${shiftColorClass(shiftTemplate)}`;
+        item.appendChild(swatch);
+        item.appendChild(document.createTextNode(` ${shiftTemplate.name} · ${formatSegmentsShort(shiftTemplate.segments)}`));
+        legend.appendChild(item);
     });
 
-    select.value = currentShiftTemplateId ? String(currentShiftTemplateId) : "";
-    select.dataset.previousValue = select.value;
+    const libre = document.createElement("span");
+    libre.className = "lg";
+    const swatch = document.createElement("span");
+    swatch.className = "sw sw-l";
+    libre.appendChild(swatch);
+    libre.appendChild(document.createTextNode(" Libre"));
+    legend.appendChild(libre);
+}
 
-    select.addEventListener("change", () => handleAssignmentChange(root, week, employeeId, date, select));
-    return select;
+function renderHead() {
+    const headRow = document.getElementById("schedule-head-row");
+    headRow.innerHTML = "";
+
+    const nameTh = document.createElement("th");
+    nameTh.className = "name-col";
+    nameTh.textContent = "Persona";
+    headRow.appendChild(nameTh);
+
+    currentDays.forEach((day, index) => {
+        const th = document.createElement("th");
+        if (WEEKEND_INDEXES.includes(index)) th.className = "wknd";
+        th.textContent = day.label;
+        headRow.appendChild(th);
+    });
+}
+
+function buildChip(shiftTemplate, isUnavailable) {
+    const chip = document.createElement("div");
+    if (isUnavailable) {
+        chip.className = "chip na";
+        chip.textContent = "No disp.";
+        return chip;
+    }
+    if (!shiftTemplate) {
+        chip.className = "chip l";
+        chip.textContent = "Libre";
+        return chip;
+    }
+    chip.className = `chip ${shiftColorClass(shiftTemplate)}`;
+    const label = document.createElement("span");
+    label.textContent = shiftTemplate.name;
+    chip.appendChild(label);
+    const time = document.createElement("span");
+    time.className = "tm tnum";
+    time.textContent = formatSegmentsShort(shiftTemplate.segments);
+    chip.appendChild(time);
+    return chip;
+}
+
+function renderGrid() {
+    const body = document.getElementById("schedule-body");
+    body.innerHTML = "";
+
+    currentEmployees.forEach((employee, index) => {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.className = "name-col";
+        const empWrap = document.createElement("div");
+        empWrap.className = "emp";
+        const avatar = document.createElement("span");
+        avatar.className = "av";
+        avatar.style.background = avatarColor(index);
+        avatar.textContent = initials(employee.name);
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "nm";
+        nameSpan.textContent = employee.name;
+        empWrap.appendChild(avatar);
+        empWrap.appendChild(nameSpan);
+        nameCell.appendChild(empWrap);
+        row.appendChild(nameCell);
+
+        currentDays.forEach((day) => {
+            const cell = document.createElement("td");
+            cell.className = "cell";
+            cell.dataset.employeeId = String(employee.id);
+            cell.dataset.date = day.date;
+
+            const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date) || null;
+            const shiftTemplate = shiftTemplateId ? currentShiftTemplates.find((t) => t.id === shiftTemplateId) : null;
+            const isUnavailable = unavailableSet.has(`${employee.id},${day.date}`);
+
+            cell.appendChild(buildChip(shiftTemplate, isUnavailable));
+            row.appendChild(cell);
+        });
+
+        body.appendChild(row);
+    });
+
+    document.getElementById("table-wrap").classList.toggle("locked", currentScheduleStatus === "PUBLISHED");
+}
+
+function triggerFillingAnimation() {
+    const wrap = document.getElementById("table-wrap");
+    wrap.querySelectorAll(".chip").forEach((chip, index) => {
+        chip.style.animationDelay = `${index * 11}ms`;
+    });
+    wrap.classList.add("filling");
+    setTimeout(() => wrap.classList.remove("filling"), 700);
+}
+
+/* ---------- edición: popover ---------- */
+
+function openPopover(cell, employeeId, date) {
+    if (currentScheduleStatus === "PUBLISHED") return;
+    const key = `${employeeId},${date}`;
+    if (unavailableSet.has(key)) {
+        const employee = currentEmployees.find((e) => e.id === employeeId);
+        showToast(`${employee ? employee.name.split(" ")[0] : "Esta persona"} no está disponible ese día`, "warn");
+        return;
+    }
+    popTarget = { employeeId, date, cell };
+    renderPopoverOptions();
+    positionPopover(cell);
+}
+
+function renderPopoverOptions() {
+    const container = document.getElementById("pop-options");
+    container.innerHTML = "";
+
+    currentShiftTemplates.forEach((shiftTemplate) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "pop-opt";
+
+        const sq = document.createElement("span");
+        sq.className = `sq ${shiftColorClass(shiftTemplate)}`;
+        button.appendChild(sq);
+
+        const label = document.createElement("span");
+        label.textContent = shiftTemplate.name;
+        button.appendChild(label);
+
+        const small = document.createElement("small");
+        small.className = "tnum";
+        small.textContent = formatSegmentsShort(shiftTemplate.segments);
+        button.appendChild(small);
+
+        button.addEventListener("click", () => applyAssignment(shiftTemplate.id));
+        container.appendChild(button);
+    });
+
+    const currentValue = assignmentsByEmployeeDate.get(popTarget.employeeId)?.get(popTarget.date);
+    if (currentValue) {
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "pop-opt";
+
+        const sq = document.createElement("span");
+        sq.className = "sq x";
+        removeButton.appendChild(sq);
+
+        const label = document.createElement("span");
+        label.textContent = "Quitar";
+        removeButton.appendChild(label);
+
+        removeButton.addEventListener("click", () => applyAssignment(null));
+        container.appendChild(removeButton);
+    }
+}
+
+function positionPopover(cell) {
+    const pop = document.getElementById("pop");
+    pop.classList.add("show");
+    pop.style.left = "0px";
+    pop.style.top = "0px";
+    const rect = cell.getBoundingClientRect();
+    const popWidth = pop.offsetWidth;
+    const popHeight = pop.offsetHeight;
+    let x = rect.left;
+    let y = rect.bottom + 6;
+    if (x + popWidth > window.innerWidth - 10) x = window.innerWidth - popWidth - 10;
+    if (y + popHeight > window.innerHeight - 10) y = rect.top - popHeight - 6;
+    pop.style.left = `${Math.max(10, x)}px`;
+    pop.style.top = `${Math.max(10, y)}px`;
+}
+
+function closePopover() {
+    document.getElementById("pop").classList.remove("show");
+    popTarget = null;
+}
+
+function setAssignmentState(employeeId, date, shiftTemplateId) {
+    if (!assignmentsByEmployeeDate.has(employeeId)) {
+        assignmentsByEmployeeDate.set(employeeId, new Map());
+    }
+    const employeeMap = assignmentsByEmployeeDate.get(employeeId);
+    if (shiftTemplateId === null) {
+        employeeMap.delete(date);
+    } else {
+        employeeMap.set(date, shiftTemplateId);
+    }
+}
+
+function flagViolation(cell) {
+    cell.classList.add("violation");
+    setTimeout(() => cell.classList.remove("violation"), 2200);
 }
 
 /**
- * Revalida al vuelo contra PUT /api/schedules/{id}/assignments. Si la edición
- * rompe una restricción dura, el backend la rechaza (422): se revierte el
- * <select> a su valor anterior y se marca en rojo.
+ * Revalida al vuelo contra PUT /api/schedules/{id}/assignments. Si rompe una
+ * dura, el backend la rechaza (422): la celda se marca en rojo con el shake
+ * y no se aplica ningún cambio local.
  */
-async function handleAssignmentChange(root, week, employeeId, date, select) {
-    select.classList.remove("shift-select-error");
-    const previousValue = select.dataset.previousValue;
-    const newShiftTemplateId = select.value ? Number(select.value) : null;
-    select.disabled = true;
-
+async function applyAssignment(shiftTemplateId) {
+    const { employeeId, date, cell } = popTarget;
+    closePopover();
     try {
-        const result = await fetchJson(`/api/schedules/${week.scheduleId}/assignments`, {
+        const result = await fetchJson(`/api/schedules/${currentScheduleId}/assignments`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ employeeId, date, shiftTemplateId: newShiftTemplateId })
+            body: JSON.stringify({ employeeId, date, shiftTemplateId })
         });
-        select.dataset.previousValue = select.value;
+        setAssignmentState(employeeId, date, shiftTemplateId);
+        renderGrid();
+        renderPanels();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
-        const warningText = hasWarnings ? ` Aviso: ${result.softWarnings.join("; ")}` : "";
-        setStatusMessage(root, `Turno actualizado.${warningText}`, hasWarnings);
+        showToast(hasWarnings ? result.softWarnings[0] : "Turno actualizado", hasWarnings ? "warn" : undefined);
     } catch (error) {
-        select.value = previousValue;
-        select.classList.add("shift-select-error");
-        setStatusMessage(root, error.message, true);
-    } finally {
-        select.disabled = false;
+        flagViolation(cell);
+        showToast(error.message, "warn");
     }
 }
 
-function renderUncoveredSlots(root, uncoveredSlots, shiftTemplateLabelsById) {
-    const list = root.getElementById("uncovered-list");
+/* ---------- paneles laterales ---------- */
+
+function renderPanels() {
+    renderCoveragePanel();
+    renderEquityPanel();
+}
+
+function renderCoveragePanel() {
+    const list = document.getElementById("coverage-list");
+    const pill = document.getElementById("coverage-pill");
     list.innerHTML = "";
-    if (!uncoveredSlots || uncoveredSlots.length === 0) {
-        list.hidden = true;
+
+    if (currentUncoveredSlots === null) {
+        pill.hidden = true;
+        appendPanelHint(list, "Los huecos de cobertura se calculan al generar; edítalos y vuelve a generar para verlos al día.");
         return;
     }
-    uncoveredSlots.forEach((slot) => {
-        const shiftLabel = shiftTemplateLabelsById.get(slot.shiftTemplateId) || `turno #${slot.shiftTemplateId}`;
-        const item = document.createElement("li");
-        item.textContent = `${slot.date} · ${shiftLabel} · faltan ${slot.missing}`;
-        list.appendChild(item);
-    });
-    list.hidden = false;
-}
-
-function setStatusMessage(root, message, isError) {
-    const el = root.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
+    if (currentUncoveredSlots.length === 0) {
+        pill.hidden = true;
+        appendPanelHint(list, "Cobertura completa.");
         return;
     }
-    el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
-    el.hidden = false;
-}
 
-function updateWeekLabel(root, status) {
-    root.getElementById("week-label").textContent =
-        `Semana ISO ${currentWeekMeta.isoWeek} · ${currentWeekMeta.isoYear} — cuadrante #${currentWeekMeta.scheduleId} (${status})`;
-}
+    pill.hidden = false;
+    pill.textContent = `${currentUncoveredSlots.length} hueco${currentUncoveredSlots.length === 1 ? "" : "s"}`;
 
-/** Al publicar, el backend ya rechaza más ediciones (409); aquí solo lo reflejamos en la UI. */
-function lockScheduleForEditing(root) {
-    root.querySelectorAll(".shift-select").forEach((select) => {
-        select.disabled = true;
+    currentUncoveredSlots.forEach((slot) => {
+        const shiftTemplate = currentShiftTemplates.find((t) => t.id === slot.shiftTemplateId);
+        const row = document.createElement("div");
+        row.className = "gap-row";
+
+        const badge = document.createElement("span");
+        badge.className = "gd";
+        badge.textContent = String(slot.missing);
+        row.appendChild(badge);
+
+        const text = document.createElement("span");
+        text.appendChild(document.createTextNode("Falta cubrir "));
+        const strong = document.createElement("b");
+        strong.textContent = `${slot.date}${shiftTemplate ? " · " + shiftTemplate.name : ""}`;
+        text.appendChild(strong);
+        row.appendChild(text);
+
+        const small = document.createElement("small");
+        small.textContent = "sin candidato";
+        row.appendChild(small);
+
+        list.appendChild(row);
     });
 }
 
-/** "08:00:00" -> "08:00" */
-function formatTime(localTime) {
-    return localTime.slice(0, 5);
-}
+function renderEquityPanel() {
+    const list = document.getElementById("equity-list");
+    list.innerHTML = "";
 
-/** "MAÑANA" + [08:00-16:00] -> "MAÑANA · 08:00–16:00"; varios tramos se unen con " y ". */
-function formatShiftLabel(shiftTemplate) {
-    const segments = shiftTemplate.segments
-        .map((s) => `${formatTime(s.startTime)}–${formatTime(s.endTime)}`)
-        .join(" y ");
-    return `${shiftTemplate.name} · ${segments}`;
-}
+    if (currentEquityReport === null) {
+        appendPanelHint(list, "La equidad se calcula al generar; edítalos y vuelve a generar para verla al día.");
+        return;
+    }
+    if (currentEquityReport.length === 0) {
+        appendPanelHint(list, "Sin datos de equidad para esta semana.");
+        return;
+    }
 
-async function loadReferenceData(venueId) {
-    const [employees, allShiftTemplates] = await Promise.all([
-        fetchJson("/api/employees"),
-        fetchJson("/api/shift-templates")
-    ]);
-    const venueEmployees = employees.filter((e) => e.venueId === venueId && e.active);
-    const shiftTemplates = allShiftTemplates.filter((t) => t.venueId === venueId);
-    return { venueEmployees, shiftTemplates };
-}
+    const sorted = [...currentEquityReport].sort((a, b) => b.badShiftsThisWeek - a.badShiftsThisWeek);
+    const max = Math.max(...sorted.map((e) => e.badShiftsThisWeek), 1);
 
-async function generateWeek(root, venueId, isoYear, isoWeek) {
-    setStatusMessage(root, null);
-    root.getElementById("uncovered-list").hidden = true;
+    sorted.forEach((entry) => {
+        const employee = currentEmployees.find((e) => e.id === entry.employeeId);
+        const row = document.createElement("div");
+        row.className = "eq-row";
 
-    const { venueEmployees, shiftTemplates } = await loadReferenceData(venueId);
-    const shiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
+        const name = document.createElement("span");
+        name.textContent = employee ? employee.name.split(" ")[0] : `#${entry.employeeId}`;
+        row.appendChild(name);
 
-    const generation = await fetchJson("/api/schedules/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ venueId, isoYear, isoWeek })
+        const bar = document.createElement("span");
+        bar.className = "eq-bar";
+        const fill = document.createElement("span");
+        fill.style.width = `${(entry.badShiftsThisWeek / max) * 100}%`;
+        bar.appendChild(fill);
+        row.appendChild(bar);
+
+        const val = document.createElement("span");
+        val.className = "val tnum";
+        val.textContent = String(entry.badShiftsThisWeek);
+        row.appendChild(val);
+
+        list.appendChild(row);
     });
-
-    const week = {
-        scheduleId: generation.scheduleId,
-        days: buildWeekDays(generation.isoYear, generation.isoWeek),
-        employees: venueEmployees.map((e) => ({ id: e.id, name: e.name })),
-        assignments: generation.assignments.map((a) => ({
-            employeeId: a.employeeId,
-            date: a.date,
-            shiftTemplateId: a.shiftTemplateId
-        })),
-        shiftTemplates: shiftTemplates.map((t) => ({ id: t.id, label: shiftTemplateLabelsById.get(t.id) }))
-    };
-
-    renderSchedule(root, week);
-    renderUncoveredSlots(root, generation.uncoveredSlots, shiftTemplateLabelsById);
-
-    currentWeekMeta = { scheduleId: generation.scheduleId, isoYear: generation.isoYear, isoWeek: generation.isoWeek };
-    document.getElementById("venue-name").textContent = `Venue #${generation.venueId}`;
-    updateWeekLabel(root, generation.status);
-
-    const publishButton = root.getElementById("publish-button");
-    publishButton.hidden = false;
-    publishButton.disabled = false;
-
-    const hint = generation.uncoveredSlots.length > 0
-        ? ` — ${generation.uncoveredSlots.length} hueco(s) sin cubrir, revisa antes de publicar`
-        : "";
-    setStatusMessage(root, `Cuadrante generado correctamente.${hint}`, generation.uncoveredSlots.length > 0);
 }
+
+function appendPanelHint(list, message) {
+    const hint = document.createElement("p");
+    hint.className = "panel-empty";
+    hint.textContent = message;
+    list.appendChild(hint);
+}
+
+/* ---------- estado del tablero (vacío / con datos) ---------- */
+
+function renderTopbarActions() {
+    const generateButton = document.getElementById("generate-button");
+    const publishButton = document.getElementById("publish-button");
+    const badge = document.getElementById("status-badge");
+
+    if (!currentScheduleStatus) {
+        generateButton.hidden = false;
+        publishButton.hidden = true;
+        badge.hidden = true;
+        return;
+    }
+
+    // Ya existe un cuadrante para esta semana: no hay endpoint para regenerarlo.
+    generateButton.hidden = true;
+    badge.hidden = false;
+    badge.className = "badge " + (currentScheduleStatus === "PUBLISHED" ? "badge-pub" : "badge-draft");
+    document.getElementById("status-txt").textContent = currentScheduleStatus === "PUBLISHED" ? "Publicado" : "Borrador";
+    publishButton.hidden = currentScheduleStatus === "PUBLISHED";
+}
+
+function showBoard() {
+    document.getElementById("board-body").style.display = "";
+    document.getElementById("empty-state").style.display = "none";
+    document.getElementById("board-sub").textContent =
+        `${currentEmployees.length} personas · ${currentShiftTemplates.length} turnos · pulsa una celda para editarla`;
+    renderTopbarActions();
+}
+
+function showEmptyState() {
+    currentScheduleId = null;
+    currentScheduleStatus = null;
+    document.getElementById("board-body").style.display = "none";
+    document.getElementById("empty-state").style.display = "";
+    renderTopbarActions();
+}
+
+async function applyState(data) {
+    currentVenueId = data.venueId;
+    currentIsoYear = data.isoYear;
+    currentIsoWeek = data.isoWeek;
+    currentScheduleId = data.scheduleId;
+    currentScheduleStatus = data.status;
+    currentEmployees = data.employees;
+    currentShiftTemplates = data.shiftTemplates;
+    currentUncoveredSlots = data.uncoveredSlots;
+    currentEquityReport = data.equityReport;
+    currentDays = buildWeekDays(data.isoYear, data.isoWeek);
+    assignmentsByEmployeeDate = groupAssignments(data.assignments);
+
+    const weekDateSet = new Set(currentDays.map((d) => d.date));
+    unavailableSet = await loadUnavailableSet(data.employees.map((e) => e.id), weekDateSet);
+
+    renderWeekLabel();
+    renderLegend();
+    renderHead();
+    renderGrid();
+    renderPanels();
+    showBoard();
+
+    fetchJson(`/api/venues/${data.venueId}`)
+        .then((venue) => { if (window.updateShellVenueName) window.updateShellVenueName(venue.name); })
+        .catch(() => {});
+}
+
+/* ---------- acciones principales ---------- */
+
+async function loadExistingWeek() {
+    const venueId = getVenueId();
+    const isoYear = getIsoYear();
+    const isoWeek = getIsoWeek();
+    if (!venueId || !isoYear || !isoWeek) return;
+
+    try {
+        const { employees, shiftTemplates } = await loadReferenceData(venueId);
+        const schedule = await fetchJson(`/api/schedules?venueId=${venueId}&isoYear=${isoYear}&isoWeek=${isoWeek}`);
+        await applyState({
+            venueId, isoYear, isoWeek,
+            scheduleId: schedule.scheduleId,
+            status: schedule.status,
+            employees, shiftTemplates,
+            assignments: schedule.assignments,
+            uncoveredSlots: null,
+            equityReport: null
+        });
+    } catch (error) {
+        showEmptyState();
+        if (error.message && error.message.startsWith("Venue no encontrado")) {
+            showToast(error.message, "warn");
+        }
+    }
+}
+
+let generating = false;
+
+async function generateWeek() {
+    if (generating) return;
+    const venueId = getVenueId();
+    const isoYear = getIsoYear();
+    const isoWeek = getIsoWeek();
+    if (!venueId || !isoYear || !isoWeek) {
+        showToast("Indica venue, año y semana", "warn");
+        return;
+    }
+
+    generating = true;
+    const buttons = [document.getElementById("generate-button"), document.getElementById("empty-generate-button")];
+    buttons.forEach((b) => { b.disabled = true; });
+
+    try {
+        const { employees, shiftTemplates } = await loadReferenceData(venueId);
+        const response = await fetchJson("/api/schedules/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ venueId, isoYear, isoWeek })
+        });
+        await applyState({
+            venueId, isoYear, isoWeek,
+            scheduleId: response.scheduleId,
+            status: response.status,
+            employees, shiftTemplates,
+            assignments: response.assignments,
+            uncoveredSlots: response.uncoveredSlots,
+            equityReport: response.equityReport
+        });
+        showToast("Propuesta generada · revísala antes de publicar");
+        triggerFillingAnimation();
+    } catch (error) {
+        showToast(error.message, "warn");
+    } finally {
+        buttons.forEach((b) => { b.disabled = false; });
+        generating = false;
+    }
+}
+
+async function publishSchedule() {
+    if (!currentScheduleId) return;
+    const button = document.getElementById("publish-button");
+    button.disabled = true;
+    try {
+        const result = await fetchJson(`/api/schedules/${currentScheduleId}/publish`, { method: "POST" });
+        currentScheduleStatus = result.status;
+        renderTopbarActions();
+        renderGrid();
+        const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
+        showToast(
+            hasWarnings ? `Publicado con avisos: ${result.softWarnings[0]}` : "Cuadrante publicado · el equipo ha sido avisado",
+            hasWarnings ? "warn" : undefined
+        );
+    } catch (error) {
+        showToast(error.message, "warn");
+    } finally {
+        button.disabled = false;
+    }
+}
+
+function shiftWeek(delta) {
+    const monday = mondayOfIsoWeek(getIsoYear(), getIsoWeek());
+    monday.setUTCDate(monday.getUTCDate() + delta * 7);
+    const { isoYear, isoWeek } = isoYearWeekOfDate(monday);
+    document.getElementById("iso-year-input").value = isoYear;
+    document.getElementById("iso-week-input").value = isoWeek;
+    loadExistingWeek();
+}
+
+/* ---------- init ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
     const { isoYear, isoWeek } = currentIsoYearWeek();
     document.getElementById("iso-year-input").value = isoYear;
     document.getElementById("iso-week-input").value = isoWeek;
 
-    document.getElementById("generate-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const button = document.getElementById("generate-button");
-        const venueId = Number(document.getElementById("venue-id-input").value);
-        const year = Number(document.getElementById("iso-year-input").value);
-        const week = Number(document.getElementById("iso-week-input").value);
+    document.getElementById("venue-id-input").addEventListener("change", loadExistingWeek);
+    document.getElementById("iso-year-input").addEventListener("change", loadExistingWeek);
+    document.getElementById("iso-week-input").addEventListener("change", loadExistingWeek);
+    document.getElementById("wk-prev").addEventListener("click", () => shiftWeek(-1));
+    document.getElementById("wk-next").addEventListener("click", () => shiftWeek(1));
+    document.getElementById("generate-button").addEventListener("click", generateWeek);
+    document.getElementById("empty-generate-button").addEventListener("click", generateWeek);
+    document.getElementById("publish-button").addEventListener("click", publishSchedule);
 
-        button.disabled = true;
-        setStatusMessage(document, "Generando…", false);
-        try {
-            await generateWeek(document, venueId, year, week);
-        } catch (error) {
-            setStatusMessage(document, error.message, true);
-        } finally {
-            button.disabled = false;
+    document.getElementById("schedule-body").addEventListener("click", (event) => {
+        const cell = event.target.closest("td.cell");
+        if (cell) {
+            openPopover(cell, Number(cell.dataset.employeeId), cell.dataset.date);
         }
     });
 
-    document.getElementById("publish-button").addEventListener("click", async (event) => {
-        const button = event.currentTarget;
-        button.disabled = true;
-        try {
-            const result = await fetchJson(`/api/schedules/${currentWeekMeta.scheduleId}/publish`, { method: "POST" });
-            lockScheduleForEditing(document);
-            updateWeekLabel(document, result.status);
-            button.hidden = true;
-
-            const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
-            const warningText = hasWarnings ? ` Aviso: ${result.softWarnings.join("; ")}` : "";
-            setStatusMessage(document, `Cuadrante publicado.${warningText}`, hasWarnings);
-        } catch (error) {
-            setStatusMessage(document, error.message, true);
-            button.disabled = false;
+    document.addEventListener("click", (event) => {
+        const pop = document.getElementById("pop");
+        if (pop.classList.contains("show") && !pop.contains(event.target) && !event.target.closest("td.cell")) {
+            closePopover();
         }
     });
+    window.addEventListener("scroll", closePopover, true);
+
+    loadExistingWeek();
 });
