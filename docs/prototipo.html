@@ -1,0 +1,808 @@
+<!-- Prototipo visual — Turnos. No funcional: solo maqueta la interfaz y las interacciones clave. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnos · prototipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1F2EE;      /* fondo, gris-verde cálido (no crema) */
+    --surface:#FFFFFF;
+    --surface-2:#FAFAF7;
+    --ink:#17302E;        /* petróleo casi negro */
+    --ink-soft:#4B5F5C;
+    --ink-faint:#8494901a;
+    --line:#DFE3DC;
+    --line-strong:#C9D0C7;
+    --brand:#0F5257;      /* teal marca */
+    --brand-deep:#0A3B3F;
+    --brand-tint:#E3EEEC;
+    --accent:#E8A33D;     /* miel — único acento vivo */
+    --accent-ink:#4A3308;
+    --danger:#C6413A;
+    --danger-bg:#FBE6E4;
+    --ok:#2F8A5B;
+    --ok-bg:#E3F1E8;
+
+    /* turnos — la firma visual */
+    --m-bg:#FCE9C4; --m-line:#E7C079; --m-ink:#7A5310;
+    --t-bg:#DBE3F6; --t-line:#A6BAE8; --t-ink:#2E3E6B;
+    --p-bg:#ECDFF1; --p-line:#CBA6D6; --p-ink:#6A3D72;
+    --l-bg:#E7EAE4; --l-line:#CBD2C9; --l-ink:#59645E;
+
+    --r:14px; --r-sm:9px;
+    --shadow:0 1px 2px rgba(20,40,38,.05), 0 8px 24px -14px rgba(20,40,38,.22);
+    --shadow-pop:0 12px 40px -12px rgba(20,40,38,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:Inter,system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    font-size:14px; line-height:1.45;
+  }
+  h1,h2,h3,.brandmark{font-family:"Bricolage Grotesque",Inter,sans-serif;letter-spacing:-.01em}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* ---------- shell ---------- */
+  .app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+  .sidebar{
+    background:var(--brand-deep);color:#DCEBE9;
+    display:flex;flex-direction:column;gap:4px;
+    padding:20px 14px;position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px}
+  .brand .logo{
+    width:30px;height:30px;border-radius:9px;background:var(--accent);
+    display:grid;place-items:center;color:var(--accent-ink);flex:none;
+  }
+  .brand .brandmark{font-weight:800;font-size:19px;color:#fff;letter-spacing:-.02em}
+  .brand small{display:block;font-size:11px;color:#7FA9A7;font-family:Inter;font-weight:500;letter-spacing:.02em;margin-top:-2px}
+
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+  .nav-item{
+    display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+    padding:9px 11px;border-radius:10px;color:#B7CFCD;font-weight:500;font-size:13.5px;
+    transition:background .15s,color .15s;
+  }
+  .nav-item svg{width:18px;height:18px;flex:none;opacity:.9}
+  .nav-item:hover{background:#0E4A4E;color:#EAF5F3}
+  .nav-item.active{background:var(--brand);color:#fff}
+  .nav-item.active svg{opacity:1}
+  .nav-spacer{flex:1}
+  .side-card{
+    background:#0E4A4E;border:1px solid #16565A;border-radius:12px;padding:12px;
+    font-size:12px;color:#9FC4C2;line-height:1.5;
+  }
+  .side-card b{color:#EAF5F3;font-weight:600}
+
+  .main{min-width:0;display:flex;flex-direction:column}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;background:rgba(241,242,238,.82);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+    padding:14px 26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  }
+  .week-nav{display:flex;align-items:center;gap:8px}
+  .wk-btn{width:32px;height:32px;border-radius:9px;border:1px solid var(--line-strong);
+    background:var(--surface);display:grid;place-items:center;transition:.15s}
+  .wk-btn:hover{border-color:var(--brand);color:var(--brand)}
+  .week-label{display:flex;flex-direction:column;line-height:1.15;min-width:170px}
+  .week-label .wk-h{font-family:"Bricolage Grotesque";font-weight:700;font-size:16px}
+  .week-label .wk-sub{font-size:12px;color:var(--ink-soft)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+    font-size:12px;font-weight:600;border:1px solid transparent}
+  .badge .dot{width:7px;height:7px;border-radius:50%}
+  .badge-draft{background:#FBF1DC;color:#8A6410;border-color:#EDD9A6}
+  .badge-draft .dot{background:var(--accent)}
+  .badge-pub{background:var(--ok-bg);color:#1E6B44;border-color:#BDE3CC}
+  .badge-pub .dot{background:var(--ok)}
+
+  .spring{flex:1}
+
+  .seg{display:flex;background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;padding:3px}
+  .seg button{padding:6px 12px;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink-soft);transition:.15s}
+  .seg button.on{background:var(--brand);color:#fff}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:10px;
+    font-weight:600;font-size:13.5px;transition:transform .08s, box-shadow .15s, background .15s;
+    border:1px solid transparent}
+  .btn:active{transform:translateY(1px)}
+  .btn svg{width:16px;height:16px}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 1px 0 #cf8f2e, var(--shadow)}
+  .btn-primary:hover{background:#EEAD4C}
+  .btn-ghost{background:var(--surface);border-color:var(--line-strong);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+  .btn-teal{background:var(--brand);color:#fff}
+  .btn-teal:hover{background:#0C4448}
+  .btn[disabled]{opacity:.5;cursor:not-allowed}
+
+  /* ---------- content ---------- */
+  .content{padding:22px 26px 60px}
+  .view{display:none;animation:fade .25s ease}
+  .view.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  .head h1{margin:0;font-size:24px;font-weight:700}
+  .head p{margin:3px 0 0;color:var(--ink-soft);font-size:13.5px}
+
+  .board-grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+
+  /* legend */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:12.5px;color:var(--ink-soft)}
+  .legend .lg{display:inline-flex;align-items:center;gap:7px}
+  .legend .sw{width:22px;height:16px;border-radius:5px;border:1px solid}
+  .sw-m{background:var(--m-bg);border-color:var(--m-line)}
+  .sw-t{background:var(--t-bg);border-color:var(--t-line)}
+  .sw-p{background:var(--p-bg);border-color:var(--p-line)}
+  .sw-l{background:var(--l-bg);border-color:var(--l-line)}
+
+  /* table */
+  .table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);overflow:auto}
+  table.grid{border-collapse:separate;border-spacing:0;width:100%;min-width:640px}
+  table.grid th,table.grid td{padding:0;text-align:center}
+  table.grid thead th{
+    position:sticky;top:0;background:var(--surface-2);z-index:3;
+    font-family:"Bricolage Grotesque";font-weight:600;font-size:12.5px;color:var(--ink-soft);
+    padding:11px 6px;border-bottom:1px solid var(--line);
+  }
+  table.grid thead th.wknd{color:var(--brand)}
+  th.name-col,td.name-col{position:sticky;left:0;z-index:2;background:var(--surface);
+    text-align:left;min-width:150px;border-right:1px solid var(--line)}
+  thead th.name-col{z-index:4}
+  td.name-col{padding:9px 12px;border-bottom:1px solid var(--line)}
+  .emp{display:flex;align-items:center;gap:9px}
+  .emp .av{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-size:11px;font-weight:700;color:#fff}
+  .emp .nm{font-weight:600;font-size:13px;line-height:1.15}
+  .emp .rl{font-size:11px;color:var(--ink-soft)}
+  table.grid tbody td.cell{border-bottom:1px solid var(--line);border-left:1px solid var(--line);
+    padding:5px;height:52px;vertical-align:middle}
+  table.grid tbody td.cell:first-of-type{border-left:none}
+
+  .chip{width:100%;height:100%;min-height:40px;border-radius:8px;border:1px solid;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;
+    font-weight:600;font-size:12px;line-height:1.1;cursor:pointer;transition:.12s;user-select:none}
+  .chip .tm{font-size:10.5px;font-weight:500;opacity:.8}
+  .chip:hover{filter:brightness(.97);box-shadow:0 2px 6px rgba(20,40,38,.12)}
+  .chip.m{background:var(--m-bg);border-color:var(--m-line);color:var(--m-ink)}
+  .chip.t{background:var(--t-bg);border-color:var(--t-line);color:var(--t-ink)}
+  .chip.p{background:var(--p-bg);border-color:var(--p-line);color:var(--p-ink)}
+  .chip.l{background:var(--l-bg);border-color:var(--l-line);color:var(--l-ink);font-weight:500}
+  .chip.empty{background:transparent;border:1.5px dashed var(--line-strong);color:#A9B2AB;font-size:18px;font-weight:400}
+  .chip.empty:hover{border-color:var(--brand);color:var(--brand)}
+  .chip.na{background:repeating-linear-gradient(-45deg,#EEF0EC,#EEF0EC 5px,#E6E9E4 5px,#E6E9E4 10px);
+    border-color:var(--line-strong);color:#96A09A;cursor:not-allowed;font-weight:500}
+  .cell.violation .chip{border-color:var(--danger);box-shadow:0 0 0 2px var(--danger-bg),0 0 0 3px var(--danger);
+    animation:shake .3s}
+  @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+
+  .locked .chip{cursor:default;pointer-events:none}
+  .locked .chip.empty{opacity:.5}
+
+  /* stagger reveal */
+  .filling .chip{animation:pop .32s cubic-bezier(.2,.9,.3,1.2) backwards}
+  @keyframes pop{from{opacity:0;transform:scale(.9) translateY(4px)}to{opacity:1;transform:none}}
+
+  /* side report */
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    padding:16px;margin-bottom:14px}
+  .panel h3{margin:0 0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .panel h3 .pill{margin-left:auto;font-family:Inter;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .pill-warn{background:#FBF1DC;color:#8A6410}
+  .pill-ok{background:var(--ok-bg);color:#1E6B44}
+
+  .gap-row{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13px;border-top:1px dashed var(--line)}
+  .gap-row:first-of-type{border-top:none}
+  .gap-row .gd{width:20px;height:20px;border-radius:6px;background:var(--danger-bg);color:var(--danger);
+    display:grid;place-items:center;flex:none;font-weight:700;font-size:12px}
+  .gap-row small{color:var(--ink-soft);margin-left:auto}
+
+  .eq-row{display:grid;grid-template-columns:78px 1fr 26px;align-items:center;gap:10px;margin:9px 0;font-size:12.5px}
+  .eq-bar{height:8px;border-radius:6px;background:#EDEFEA;overflow:hidden}
+  .eq-bar span{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--brand),#2C8188)}
+  .eq-row .val{text-align:right;color:var(--ink-soft);font-weight:600}
+
+  .empty-state{background:var(--surface);border:1.5px dashed var(--line-strong);border-radius:var(--r);
+    padding:60px 24px;text-align:center;box-shadow:var(--shadow)}
+  .empty-state .ic{width:56px;height:56px;border-radius:16px;background:var(--brand-tint);color:var(--brand);
+    display:grid;place-items:center;margin:0 auto 16px}
+  .empty-state h2{margin:0 0 6px;font-size:19px}
+  .empty-state p{margin:0 0 20px;color:var(--ink-soft);max-width:360px;margin-inline:auto}
+
+  /* equipo view */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:14px}
+  .ecard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+  .ecard .top{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+  .ecard .av{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700}
+  .ecard .nm{font-weight:700;font-size:15px}
+  .ecard .rl{font-size:12.5px;color:var(--ink-soft)}
+  .ecard .meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);
+    border:1px solid var(--line);color:var(--ink-soft)}
+  .tag.full{background:var(--brand-tint);color:var(--brand-deep);border-color:#BFD9D5}
+  .ecard .fair{font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;margin-bottom:5px}
+  .prefs-mini{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .pref-chip{font-size:11.5px;padding:4px 9px;border-radius:8px;font-weight:500}
+  .pref-yes{background:var(--m-bg);color:var(--m-ink)}
+  .pref-no{background:var(--danger-bg);color:#9A322C}
+
+  /* preferencias form */
+  .form-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    max-width:640px;padding:22px}
+  .field{padding:16px 0;border-top:1px solid var(--line)}
+  .field:first-child{border-top:none;padding-top:2px}
+  .field .lab{font-weight:600;font-size:14px;margin-bottom:3px}
+  .field .hint{font-size:12.5px;color:var(--ink-soft);margin-bottom:11px}
+  .choices{display:flex;gap:8px;flex-wrap:wrap}
+  .choice{padding:8px 13px;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--surface-2);
+    font-weight:600;font-size:13px;color:var(--ink-soft);transition:.14s}
+  .choice.sel{border-color:var(--brand);background:var(--brand-tint);color:var(--brand-deep)}
+  .avoid.sel{border-color:var(--danger);background:var(--danger-bg);color:#9A322C}
+  .switch-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0}
+  .switch{width:44px;height:26px;border-radius:999px;background:var(--line-strong);position:relative;transition:.18s;flex:none}
+  .switch.on{background:var(--ok)}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .switch.on::after{left:21px}
+  .weight{display:flex;gap:6px;margin-top:4px}
+  .wdot{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--line-strong);background:var(--surface-2);
+    font-weight:700;font-size:13px;color:var(--ink-soft)}
+  .wdot.on{border-color:var(--accent);background:#FBF1DC;color:var(--accent-ink)}
+
+  /* ajustes coverage */
+  .cov-tbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);font-size:13px}
+  .cov-tbl th,.cov-tbl td{padding:11px 12px;text-align:center;border-bottom:1px solid var(--line)}
+  .cov-tbl th{background:var(--surface-2);font-family:"Bricolage Grotesque";font-weight:600;color:var(--ink-soft);font-size:12.5px}
+  .cov-tbl td:first-child,.cov-tbl th:first-child{text-align:left;font-weight:600}
+  .cov-tbl tr:last-child td{border-bottom:none}
+  .cov-num{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 6px;border-radius:8px;
+    background:var(--brand-tint);color:var(--brand-deep);font-weight:700;font-size:13px}
+
+  /* popover */
+  .pop{position:fixed;z-index:100;background:var(--surface);border:1px solid var(--line-strong);
+    border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;width:200px;display:none}
+  .pop.show{display:block;animation:popin .14s ease}
+  @keyframes popin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  .pop .ph{font-size:11px;color:var(--ink-soft);padding:6px 8px 4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .pop-opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px;border-radius:8px;font-size:13px;font-weight:500}
+  .pop-opt:hover{background:var(--surface-2)}
+  .pop-opt .sq{width:16px;height:16px;border-radius:5px;border:1px solid}
+  .sq.m{background:var(--m-bg);border-color:var(--m-line)}
+  .sq.t{background:var(--t-bg);border-color:var(--t-line)}
+  .sq.p{background:var(--p-bg);border-color:var(--p-line)}
+  .sq.l{background:var(--l-bg);border-color:var(--l-line)}
+  .sq.x{background:#F3F4F1;border-color:var(--line-strong);position:relative}
+
+  /* toast */
+  .toasts{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:200;display:flex;
+    flex-direction:column;gap:10px;align-items:center;pointer-events:none}
+  .toast{background:var(--brand-deep);color:#EAF5F3;padding:12px 18px;border-radius:12px;font-size:13.5px;
+    font-weight:500;box-shadow:var(--shadow-pop);display:flex;align-items:center;gap:10px;
+    animation:tin .3s ease;max-width:90vw}
+  .toast.warn{background:#8A2F29}
+  .toast svg{width:18px;height:18px;flex:none}
+  @keyframes tin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* proto ribbon */
+  .ribbon{position:fixed;top:11px;right:-42px;transform:rotate(38deg);background:var(--accent);color:var(--accent-ink);
+    font-size:10.5px;font-weight:800;letter-spacing:.08em;padding:4px 48px;z-index:300;box-shadow:var(--shadow);pointer-events:none}
+
+  @media (max-width:960px){
+    .board-grid{grid-template-columns:1fr}
+    .app{grid-template-columns:1fr}
+    .sidebar{position:sticky;top:0;height:auto;flex-direction:row;align-items:center;overflow-x:auto;padding:10px 12px;gap:6px}
+    .brand{padding:0 8px 0 4px}.brand small{display:none}
+    .nav{flex-direction:row;margin-top:0}
+    .nav-item span{display:none}.nav-item{padding:9px}
+    .nav-spacer,.side-card{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+</style>
+
+<div class="ribbon">PROTOTIPO</div>
+
+<div class="app">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 2v3M16 2v3M3 9h18"/><rect x="3" y="5" width="18" height="17" rx="3"/></svg>
+      </div>
+      <div>
+        <span class="brandmark">Turnos</span>
+        <small>Bar La Alameda</small>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="cuadrante">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>
+        <span>Cuadrante</span>
+      </button>
+      <button class="nav-item" data-view="equipo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M20.5 20a5 5 0 0 0-3.5-4.8"/></svg>
+        <span>Equipo</span>
+      </button>
+      <button class="nav-item" data-view="prefs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h11M4 12h7M4 18h13"/><circle cx="18" cy="6" r="2.3"/><circle cx="14" cy="12" r="2.3"/><circle cx="20" cy="18" r="2.3"/></svg>
+        <span>Preferencias</span>
+      </button>
+      <button class="nav-item" data-view="ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+        <span>Ajustes del local</span>
+      </button>
+    </nav>
+    <div class="nav-spacer"></div>
+    <div class="side-card">
+      Estás en modo <b>encargado</b>. Nada se publica sin que tú lo revises.
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="week-nav">
+        <button class="wk-btn" id="wkPrev" aria-label="Semana anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="week-label">
+          <span class="wk-h" id="wkH">Semana 18</span>
+          <span class="wk-sub" id="wkSub">27 abr – 3 may 2026</span>
+        </div>
+        <button class="wk-btn" id="wkNext" aria-label="Semana siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <span class="badge badge-draft" id="statusBadge"><span class="dot"></span><span id="statusTxt">Borrador</span></span>
+
+      <div class="spring"></div>
+
+      <div class="seg" id="roleSeg">
+        <button class="on" data-role="manager">Encargado</button>
+        <button data-role="employee">Empleado</button>
+      </div>
+      <button class="btn btn-ghost" id="btnGenerate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+        Generar semana
+      </button>
+      <button class="btn btn-teal" id="btnPublish">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Publicar
+      </button>
+    </div>
+
+    <div class="content">
+      <!-- ===== CUADRANTE ===== -->
+      <section class="view show" id="view-cuadrante">
+        <div class="head">
+          <div>
+            <h1 id="boardTitle">Cuadrante semanal</h1>
+            <p id="boardSub">10 personas · 3 turnos · pulsa una celda para editarla</p>
+          </div>
+        </div>
+
+        <div id="boardBody">
+          <div class="legend">
+            <span class="lg"><span class="sw sw-m"></span> Mañana · 08–16</span>
+            <span class="lg"><span class="sw sw-t"></span> Tarde · 16–00</span>
+            <span class="lg"><span class="sw sw-p"></span> Partido</span>
+            <span class="lg"><span class="sw sw-l"></span> Libre</span>
+          </div>
+
+          <div class="board-grid">
+            <div class="table-wrap">
+              <table class="grid">
+                <thead><tr id="gridHead"></tr></thead>
+                <tbody id="gridBody"></tbody>
+              </table>
+            </div>
+
+            <div>
+              <div class="panel">
+                <h3>Cobertura <span class="pill pill-warn" id="covPill">2 huecos</span></h3>
+                <div id="gapsList"></div>
+              </div>
+              <div class="panel">
+                <h3>Equidad de turnos duros</h3>
+                <p style="margin:-4px 0 12px;font-size:12px;color:var(--ink-soft)">Viernes/sábado noche y domingos, repartidos entre el equipo.</p>
+                <div id="eqList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state" id="emptyState" style="display:none">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+          <h2>Esta semana aún no tiene cuadrante</h2>
+          <p>Genera una propuesta a partir de las preferencias del equipo y ajústala a mano antes de publicar.</p>
+          <button class="btn btn-primary" id="emptyGenerate" style="margin:0 auto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+            Generar semana
+          </button>
+        </div>
+      </section>
+
+      <!-- ===== EQUIPO ===== -->
+      <section class="view" id="view-equipo">
+        <div class="head"><div><h1>Equipo</h1><p>Plantilla del local y su carga de turnos duros.</p></div>
+          <button class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Añadir persona</button>
+        </div>
+        <div class="cards" id="teamCards"></div>
+      </section>
+
+      <!-- ===== PREFERENCIAS ===== -->
+      <section class="view" id="view-prefs">
+        <div class="head"><div><h1>Preferencias</h1><p>Lo que el equipo pide. Las duras se respetan siempre; las blandas se intentan.</p></div></div>
+        <div class="form-wrap">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:6px">
+            <div class="av" style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:700;background:#C0673F">MG</div>
+            <div><div style="font-weight:700;font-size:16px">Marta Gil</div><div style="font-size:12.5px;color:var(--ink-soft)">Camarera · jornada completa</div></div>
+          </div>
+
+          <div class="field">
+            <div class="lab">Franja que prefiere</div>
+            <div class="hint">El algoritmo intentará darle esta franja cuando pueda.</div>
+            <div class="choices" data-single="pref-shift">
+              <button class="choice">Mañana</button>
+              <button class="choice sel">Tarde</button>
+              <button class="choice">Me da igual</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lab">Días que prefiere evitar</div>
+            <div class="hint">Blando: se evita si es posible, pero puede tocar.</div>
+            <div class="choices" data-multi="avoid-day">
+              <button class="choice avoid">Lun</button><button class="choice avoid">Mar</button>
+              <button class="choice avoid">Mié</button><button class="choice avoid">Jue</button>
+              <button class="choice avoid">Vie</button><button class="choice avoid">Sáb</button>
+              <button class="choice avoid sel">Dom</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="switch-row">
+              <div><div class="lab">No disponible: 15–18 mayo</div><div class="hint" style="margin:0">Restricción dura — boda. Nunca se le asignará.</div></div>
+              <button class="switch on" data-switch></button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="lab">Importancia de sus preferencias</div>
+            <div class="hint">Cuánto pesan frente a las de otros al repartir.</div>
+            <div class="weight" data-weight>
+              <button class="wdot">1</button><button class="wdot">2</button>
+              <button class="wdot on">3</button><button class="wdot">4</button><button class="wdot">5</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:20px">
+            <button class="btn btn-teal" id="savePrefs">Guardar preferencias</button>
+            <button class="btn btn-ghost">Cancelar</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== AJUSTES ===== -->
+      <section class="view" id="view-ajustes">
+        <div class="head"><div><h1>Cobertura mínima</h1><p>Cuánta gente necesitas en cada día y franja. Es la base del reparto.</p></div></div>
+        <table class="cov-tbl">
+          <thead><tr><th>Franja</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th class="wknd">Vie</th><th class="wknd">Sáb</th><th class="wknd">Dom</th></tr></thead>
+          <tbody id="covBody"></tbody>
+        </table>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:14px">Toca un número para ajustarlo. Los cambios se aplican a los próximos cuadrantes generados.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- popover editor -->
+<div class="pop" id="pop">
+  <div class="ph">Asignar turno</div>
+  <button class="pop-opt" data-set="M"><span class="sq m"></span> Mañana <small style="margin-left:auto;color:var(--ink-soft)">08–16</small></button>
+  <button class="pop-opt" data-set="T"><span class="sq t"></span> Tarde <small style="margin-left:auto;color:var(--ink-soft)">16–00</small></button>
+  <button class="pop-opt" data-set="P"><span class="sq p"></span> Partido</button>
+  <button class="pop-opt" data-set="L"><span class="sq l"></span> Libre</button>
+  <button class="pop-opt" data-set="X"><span class="sq x"></span> Quitar</button>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+(function(){
+  "use strict";
+  const $=(s,r=document)=>r.querySelector(s);
+  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+
+  const DAYS=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+  const WEEKEND=[4,5,6];
+  const SH={
+    M:{c:"m",l:"Mañana",t:"08–16"},
+    T:{c:"t",l:"Tarde",t:"16–00"},
+    P:{c:"p",l:"Partido",t:"12·20"},
+    L:{c:"l",l:"Libre",t:""}
+  };
+  const COLORS=["#0F5257","#C0673F","#3B6EA5","#8B5A8C","#2F8A5B","#B4842B","#4A5568","#A03A4E","#2C7A7B","#6B4E9E"];
+  const EMP=[
+    {n:"Ana Ruiz",r:"Encargada",ct:"Completa"},
+    {n:"Marta Gil",r:"Camarera",ct:"Completa"},
+    {n:"Juan Vega",r:"Cocina",ct:"Completa"},
+    {n:"Lucía Marín",r:"Camarera",ct:"Parcial 20h"},
+    {n:"Carlos Peña",r:"Barra",ct:"Completa"},
+    {n:"Sofía Díaz",r:"Camarera",ct:"Parcial 25h"},
+    {n:"Diego Torres",r:"Cocina",ct:"Completa"},
+    {n:"Elena Sanz",r:"Barra",ct:"Completa"},
+    {n:"Pablo Ortiz",r:"Camarero",ct:"Parcial 20h"},
+    {n:"Nuria Castro",r:"Camarera",ct:"Completa"}
+  ];
+  // celdas no disponibles (restricción dura ejemplo): "emp,dia"
+  const NA=new Set(["3,6","5,2"]); // Lucía Dom, Sofía Mié
+
+  // dos "generaciones" limpias (sin Tarde→Mañana consecutivo)
+  const GEN=[
+    [["M","M","L","M","M","T","L"],["T","T","L","T","T","L","L"],["M","M","M","L","T","T","L"],
+     ["L","T","L","L","T","L","L"],["M","L","M","T","L","T","T"],["L","L","M","L","T","T","L"],
+     ["L","M","M","M","L","L","T"],["L","T","L","M","M","L","T"],["M","L","L","T","L","L","T"],
+     ["M","T","L","M","L","T","L"]],
+    [["M","L","M","M","T","L","T"],["T","L","T","T","L","T","L"],["M","M","L","M","M","T","L"],
+     ["T","L","L","T","L","L","L"],["L","M","M","L","T","T","L"],["L","M","L","L","T","L","L"],
+     ["M","L","M","M","L","T","L"],["T","L","M","L","M","L","T"],["L","T","L","L","T","L","L"],
+     ["L","M","T","L","M","T","L"]]
+  ];
+  const initials=n=>n.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase();
+
+  const state={grid:null,genIdx:0,published:false,role:"manager",weekOffset:0};
+
+  /* ---------- toasts ---------- */
+  const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  function toast(msg,type){
+    const t=document.createElement("div");
+    t.className="toast"+(type==="warn"?" warn":"");
+    t.innerHTML=(type==="warn"?WARN:CHECK)+"<span>"+msg+"</span>";
+    $("#toasts").appendChild(t);
+    setTimeout(()=>{t.style.transition="opacity .3s,transform .3s";t.style.opacity="0";t.style.transform="translateY(8px)";setTimeout(()=>t.remove(),300);},2600);
+  }
+
+  /* ---------- render grid ---------- */
+  function renderHead(){
+    const single=state.role==="employee";
+    $("#gridHead").innerHTML='<th class="name-col">'+(single?"":"Persona")+'</th>'+
+      DAYS.map((d,i)=>'<th class="'+(WEEKEND.includes(i)?"wknd":"")+'">'+d+'</th>').join("");
+  }
+  function chipHTML(code,ei,di){
+    if(NA.has(ei+","+di)) return '<div class="chip na">No disp.</div>';
+    if(!code||code==="X") return '<div class="chip empty">+</div>';
+    const s=SH[code];
+    return '<div class="chip '+s.c+'">'+s.l+(s.t?'<span class="tm tnum">'+s.t+'</span>':'')+'</div>';
+  }
+  function renderBody(filling){
+    const rows = state.role==="employee" ? [1] : EMP.map((_,i)=>i);
+    let html="";
+    rows.forEach(ei=>{
+      const e=EMP[ei];
+      html+='<tr><td class="name-col"><div class="emp">'+
+        '<span class="av" style="background:'+COLORS[ei]+'">'+initials(e.n)+'</span>'+
+        '<span><span class="nm">'+e.n+'</span><br><span class="rl">'+e.r+'</span></span></div></td>';
+      for(let di=0;di<7;di++){
+        const code=state.grid?state.grid[ei][di]:null;
+        html+='<td class="cell" data-e="'+ei+'" data-d="'+di+'">'+chipHTML(code,ei,di)+'</td>';
+      }
+      html+='</tr>';
+    });
+    const tb=$("#gridBody");
+    tb.innerHTML=html;
+    if(filling){tb.parentElement.parentElement.classList.add("filling");
+      $$(".chip",tb).forEach((c,i)=>c.style.animationDelay=(i*11)+"ms");
+      setTimeout(()=>tb.parentElement.parentElement.classList.remove("filling"),700);}
+    $("#gridBody").parentElement.parentElement.parentElement.parentElement.classList.toggle("locked",state.published);
+    if(state.grid) validate();
+  }
+
+  /* ---------- side panels ---------- */
+  function renderPanels(){
+    const gaps=[{d:"Vie",f:"Tarde",n:1},{d:"Sáb",f:"Tarde",n:1}];
+    $("#gapsList").innerHTML = state.grid ? gaps.map(g=>
+      '<div class="gap-row"><span class="gd">'+g.n+'</span> Falta cubrir <b style="margin-left:3px">'+g.d+' '+g.f.toLowerCase()+'</b><small>sin candidato</small></div>'
+    ).join("") : '<p style="font-size:13px;color:var(--ink-soft);margin:0">Genera el cuadrante para ver la cobertura.</p>';
+
+    if(!state.grid){$("#eqList").innerHTML="";return;}
+    const hard=EMP.map((_,ei)=>{let c=0;for(let di=0;di<7;di++){const v=state.grid[ei][di];if(WEEKEND.includes(di)&&(v==="T"||v==="P"))c++;}return{n:EMP[ei].n.split(" ")[0],c};});
+    const max=Math.max(...hard.map(h=>h.c),1);
+    hard.sort((a,b)=>b.c-a.c);
+    $("#eqList").innerHTML=hard.slice(0,6).map(h=>
+      '<div class="eq-row"><span>'+h.n+'</span><span class="eq-bar"><span style="width:'+(h.c/max*100)+'%"></span></span><span class="val tnum">'+h.c+'</span></div>'
+    ).join("");
+  }
+
+  /* ---------- validation (Tarde→Mañana < 12h) ---------- */
+  function validate(){
+    $$(".cell.violation").forEach(c=>c.classList.remove("violation"));
+    if(!state.grid) return [];
+    const msgs=[];
+    EMP.forEach((e,ei)=>{
+      for(let di=0;di<6;di++){
+        if(state.grid[ei][di]==="T" && state.grid[ei][di+1]==="M"){
+          markViol(ei,di);markViol(ei,di+1);
+          msgs.push(e.n.split(" ")[0]+": menos de 12 h entre "+DAYS[di]+" tarde y "+DAYS[di+1]+" mañana");
+        }
+      }
+    });
+    return msgs;
+  }
+  function markViol(ei,di){const c=$('td.cell[data-e="'+ei+'"][data-d="'+di+'"]');if(c)c.classList.add("violation");}
+
+  /* ---------- generate ---------- */
+  let generating=false;
+  function generate(){
+    if(generating)return;generating=true;
+    showBoard(true);
+    const btns=[$("#btnGenerate"),$("#emptyGenerate")];
+    btns.forEach(b=>{if(b){b.disabled=true;}});
+    $("#btnGenerate").innerHTML='<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="animation:spin .8s linear infinite"><path d="M12 3a9 9 0 1 0 9 9"/></svg> Generando…';
+    if(!document.getElementById("spinkf")){const st=document.createElement("style");st.id="spinkf";st.textContent="@keyframes spin{to{transform:rotate(360deg)}}";document.head.appendChild(st);}
+    setTimeout(()=>{
+      state.grid=GEN[state.genIdx%GEN.length].map(r=>r.slice());
+      state.genIdx++;state.published=false;setStatus(false);
+      renderBody(true);renderPanels();
+      $("#btnGenerate").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg> Regenerar';
+      btns.forEach(b=>{if(b)b.disabled=false;});
+      generating=false;
+      toast("Propuesta generada · revísala antes de publicar");
+    },780);
+  }
+
+  function showBoard(hasGrid){
+    $("#boardBody").style.display=hasGrid?"":"none";
+    $("#emptyState").style.display=hasGrid?"none":"";
+  }
+
+  /* ---------- status ---------- */
+  function setStatus(pub){
+    state.published=pub;
+    const b=$("#statusBadge");
+    b.className="badge "+(pub?"badge-pub":"badge-draft");
+    $("#statusTxt").textContent=pub?"Publicado":"Borrador";
+    $("#btnGenerate").style.display=pub?"none":"";
+    $("#btnPublish").innerHTML=pub
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg> Volver a borrador'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Publicar';
+    renderBody();
+  }
+
+  /* ---------- popover editing ---------- */
+  const pop=$("#pop");let popTarget=null;
+  function openPop(cell){
+    if(state.published||state.role==="employee")return;
+    const ei=+cell.dataset.e,di=+cell.dataset.d;
+    if(NA.has(ei+","+di)){toast(EMP[ei].n.split(" ")[0]+" no está disponible ese día","warn");return;}
+    popTarget={ei,di};
+    const r=cell.getBoundingClientRect();
+    pop.classList.add("show");
+    const pw=pop.offsetWidth,ph=pop.offsetHeight;
+    let x=r.left, y=r.bottom+6;
+    if(x+pw>innerWidth-10)x=innerWidth-pw-10;
+    if(y+ph>innerHeight-10)y=r.top-ph-6;
+    pop.style.left=Math.max(10,x)+"px";pop.style.top=Math.max(10,y)+"px";
+  }
+  function closePop(){pop.classList.remove("show");popTarget=null;}
+  $$(".pop-opt",pop).forEach(o=>o.addEventListener("click",()=>{
+    if(!popTarget)return;
+    const set=o.dataset.set;
+    state.grid[popTarget.ei][popTarget.di]= set==="X"?null:set;
+    renderBody();renderPanels();
+    const msgs=validate();
+    closePop();
+    if(msgs.length){toast(msgs[0],"warn");}
+  }));
+
+  /* ---------- publish ---------- */
+  $("#btnPublish").addEventListener("click",()=>{
+    if(!state.grid){toast("Genera un cuadrante primero","warn");return;}
+    if(state.published){setStatus(false);toast("Cuadrante reabierto para editar");return;}
+    const msgs=validate();
+    if(msgs.length){toast("No puedes publicar: "+msgs[0],"warn");return;}
+    setStatus(true);
+    toast("Cuadrante publicado · el equipo ha sido avisado");
+  });
+
+  /* ---------- generate buttons ---------- */
+  $("#btnGenerate").addEventListener("click",generate);
+  $("#emptyGenerate").addEventListener("click",generate);
+
+  /* ---------- week nav ---------- */
+  function renderWeek(){
+    const base=18+state.weekOffset;
+    $("#wkH").textContent="Semana "+base;
+    const ranges={18:"27 abr – 3 may 2026",19:"4 – 10 may 2026",17:"20 – 26 abr 2026",20:"11 – 17 may 2026",16:"13 – 19 abr 2026"};
+    $("#wkSub").textContent=ranges[base]||"— 2026";
+  }
+  $("#wkPrev").addEventListener("click",()=>{state.weekOffset--;renderWeek();state.grid=null;state.published=false;setStatus(false);showBoard(false);renderPanels();});
+  $("#wkNext").addEventListener("click",()=>{state.weekOffset++;renderWeek();state.grid=null;state.published=false;setStatus(false);showBoard(false);renderPanels();});
+
+  /* ---------- role toggle ---------- */
+  $$("#roleSeg button").forEach(b=>b.addEventListener("click",()=>{
+    $$("#roleSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+    state.role=b.dataset.role;
+    const emp=state.role==="employee";
+    $("#boardTitle").textContent=emp?"Mi semana":"Cuadrante semanal";
+    $("#boardSub").textContent=emp?"Marta Gil · camarera":"10 personas · 3 turnos · pulsa una celda para editarla";
+    $("#btnGenerate").style.display=emp?"none":(state.published?"none":"");
+    $("#btnPublish").style.display=emp?"none":"";
+    $(".side-card").innerHTML=emp?'Estás en modo <b>empleado</b>. Ves tu horario y gestionas tus preferencias.':'Estás en modo <b>encargado</b>. Nada se publica sin que tú lo revises.';
+    renderHead();renderBody();renderPanels();
+  }));
+
+  /* ---------- nav views ---------- */
+  $$(".nav-item").forEach(n=>n.addEventListener("click",()=>{
+    $$(".nav-item").forEach(x=>x.classList.remove("active"));n.classList.add("active");
+    const v=n.dataset.view;
+    $$(".view").forEach(x=>x.classList.remove("show"));
+    $("#view-"+v).classList.add("show");
+  }));
+
+  /* ---------- cell click delegation ---------- */
+  $("#gridBody").addEventListener("click",e=>{
+    const cell=e.target.closest("td.cell");
+    if(cell)openPop(cell);
+  });
+  document.addEventListener("click",e=>{
+    if(pop.classList.contains("show") && !pop.contains(e.target) && !e.target.closest("td.cell"))closePop();
+  });
+  window.addEventListener("scroll",closePop,true);
+
+  /* ---------- prefs form interactions ---------- */
+  $$('[data-single] .choice').forEach(c=>c.addEventListener("click",()=>{
+    c.parentElement.querySelectorAll(".choice").forEach(x=>x.classList.remove("sel"));c.classList.add("sel");
+  }));
+  $$('[data-multi] .choice').forEach(c=>c.addEventListener("click",()=>c.classList.toggle("sel")));
+  $$('[data-weight] .wdot').forEach(d=>d.addEventListener("click",()=>{
+    d.parentElement.querySelectorAll(".wdot").forEach(x=>x.classList.remove("on"));d.classList.add("on");
+  }));
+  $$('[data-switch]').forEach(s=>s.addEventListener("click",()=>s.classList.toggle("on")));
+  $("#savePrefs")&&$("#savePrefs").addEventListener("click",()=>toast("Preferencias de Marta guardadas"));
+
+  /* ---------- team cards ---------- */
+  function renderTeam(){
+    const prefs=[
+      ["Tarde","Dom"],["Tarde","Dom"],["Mañana",""],["Mañana","Sáb"],["Tarde",""],
+      ["Mañana","Vie"],["",""],["Tarde","Lun"],["Mañana","Dom"],["Tarde","Mié"]
+    ];
+    $("#teamCards").innerHTML=EMP.map((e,i)=>{
+      const hard=state.grid?(()=>{let c=0;for(let d=0;d<7;d++){const v=state.grid[i][d];if(WEEKEND.includes(d)&&(v==="T"||v==="P"))c++;}return c;})():"–";
+      const p=prefs[i];
+      return '<div class="ecard"><div class="top"><div class="av" style="background:'+COLORS[i]+'">'+initials(e.n)+'</div>'+
+        '<div><div class="nm">'+e.n+'</div><div class="rl">'+e.r+'</div></div></div>'+
+        '<div class="meta"><span class="tag '+(e.ct==="Completa"?"full":"")+'">'+e.ct+'</span></div>'+
+        '<div class="fair"><span>Turnos duros esta semana</span><b class="tnum">'+hard+'</b></div>'+
+        '<div class="eq-bar"><span style="width:'+(hard==="–"?0:hard/4*100)+'%"></span></div>'+
+        '<div class="prefs-mini">'+(p[0]?'<span class="pref-chip pref-yes">Prefiere '+p[0].toLowerCase()+'</span>':'')+
+          (p[1]?'<span class="pref-chip pref-no">Evita '+p[1]+'</span>':'')+'</div></div>';
+    }).join("");
+  }
+
+  /* ---------- coverage table ---------- */
+  function renderCov(){
+    const rows=[
+      ["Mañana",[2,2,2,2,2,3,2]],
+      ["Tarde",[2,2,2,3,3,4,3]],
+      ["Partido",[1,1,1,1,2,2,1]]
+    ];
+    $("#covBody").innerHTML=rows.map(r=>
+      '<tr><td>'+r[0]+'</td>'+r[1].map(n=>'<td><span class="cov-num tnum">'+n+'</span></td>').join("")+'</tr>'
+    ).join("");
+  }
+
+  /* ---------- init ---------- */
+  renderHead();renderWeek();setStatus(false);
+  state.grid=GEN[0].map(r=>r.slice());state.genIdx=1; // arranca con un cuadrante ya generado
+  $("#btnGenerate").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg> Regenerar';
+  showBoard(true);renderBody();renderPanels();renderTeam();renderCov();
+})();
+</script>
