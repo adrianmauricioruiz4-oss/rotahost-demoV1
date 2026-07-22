@@ -191,7 +191,7 @@ Marca las casillas al completar. Una tarea, un commit.
 ### Fase 4 — Salir al mercado
 - [x] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
 - [ ] T4.2 — Multi-tenant básico por `venueId` (un `MANAGER` puede tener varios `Venue`)
-- [ ] T4.3 — Migraciones con Flyway
+- [x] T4.3 — Migraciones con Flyway
 - [ ] T4.4 — Deploy (Docker + VPS) + `README.md` público
 - [x] T4.5 — Pantalla de login (UI de acceso + "recuperar contraseña"; usa la auth real de T4.1)
 - [ ] T4.6 — Panel principal: listado de locales del usuario (nombre, nº empleados, estado del
