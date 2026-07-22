@@ -5,6 +5,8 @@ import com.generador.horarios.proyecto.shift.ShiftTemplateRepository;
 import com.generador.horarios.proyecto.venue.dto.CoverageRequirementRequest;
 import com.generador.horarios.proyecto.venue.dto.CoverageRequirementResponse;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +15,9 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Lógica de negocio del CRUD de CoverageRequirement: valida venue y
  * shiftTemplate existentes y coherentes, y evita duplicar la misma
- * combinación (venue, día de la semana, shiftTemplate).
+ * combinación (venue, día de la semana, shiftTemplate, puesto) — el puesto
+ * entra en la clave desde T5.3, así que un mismo día+turno puede tener varios
+ * requisitos (uno general y/o uno por puesto).
  */
 @Service
 public class CoverageRequirementService {
@@ -36,15 +40,15 @@ public class CoverageRequirementService {
         Venue venue = findVenueOrThrow(request.venueId());
         ShiftTemplate shiftTemplate = findShiftTemplateOrThrow(request.venueId(), request.shiftTemplateId());
 
-        coverageRequirementRepository
-                .findByVenueIdAndDayOfWeekAndShiftTemplateId(request.venueId(), request.dayOfWeek(), request.shiftTemplateId())
+        findSameCombination(request, null)
                 .ifPresent(existing -> {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
-                            "Ya existe un requisito de cobertura para " + request.dayOfWeek() + " y ese turno");
+                            "Ya existe un requisito de cobertura para " + request.dayOfWeek() + ", ese turno y ese puesto");
                 });
 
         CoverageRequirement coverageRequirement =
                 new CoverageRequirement(venue, request.dayOfWeek(), shiftTemplate, request.requiredCount());
+        coverageRequirement.setPosition(request.position());
         return toResponse(coverageRequirementRepository.save(coverageRequirement));
     }
 
@@ -64,18 +68,17 @@ public class CoverageRequirementService {
         Venue venue = findVenueOrThrow(request.venueId());
         ShiftTemplate shiftTemplate = findShiftTemplateOrThrow(request.venueId(), request.shiftTemplateId());
 
-        coverageRequirementRepository
-                .findByVenueIdAndDayOfWeekAndShiftTemplateId(request.venueId(), request.dayOfWeek(), request.shiftTemplateId())
-                .filter(other -> !other.getId().equals(id))
+        findSameCombination(request, id)
                 .ifPresent(other -> {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
-                            "Ya existe un requisito de cobertura para " + request.dayOfWeek() + " y ese turno");
+                            "Ya existe un requisito de cobertura para " + request.dayOfWeek() + ", ese turno y ese puesto");
                 });
 
         coverageRequirement.setVenue(venue);
         coverageRequirement.setDayOfWeek(request.dayOfWeek());
         coverageRequirement.setShiftTemplate(shiftTemplate);
         coverageRequirement.setRequiredCount(request.requiredCount());
+        coverageRequirement.setPosition(request.position());
         return toResponse(coverageRequirement);
     }
 
@@ -84,6 +87,16 @@ public class CoverageRequirementService {
     public void delete(Long id) {
         CoverageRequirement coverageRequirement = findCoverageRequirementOrThrow(id);
         coverageRequirementRepository.delete(coverageRequirement);
+    }
+
+    /** excludeId se pasa en update para no comparar la fila contra sí misma. */
+    private Optional<CoverageRequirement> findSameCombination(CoverageRequirementRequest request, Long excludeId) {
+        return coverageRequirementRepository
+                .findByVenueIdAndDayOfWeekAndShiftTemplateId(request.venueId(), request.dayOfWeek(), request.shiftTemplateId())
+                .stream()
+                .filter(other -> excludeId == null || !other.getId().equals(excludeId))
+                .filter(other -> Objects.equals(other.getPosition(), request.position()))
+                .findFirst();
     }
 
     private ShiftTemplate findShiftTemplateOrThrow(Long venueId, Long shiftTemplateId) {
@@ -119,6 +132,7 @@ public class CoverageRequirementService {
                 coverageRequirement.getVenue().getId(),
                 coverageRequirement.getDayOfWeek(),
                 coverageRequirement.getShiftTemplate().getId(),
-                coverageRequirement.getRequiredCount());
+                coverageRequirement.getRequiredCount(),
+                coverageRequirement.getPosition());
     }
 }

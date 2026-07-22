@@ -1,6 +1,7 @@
 package com.generador.horarios.proyecto.schedule.engine;
 
 import com.generador.horarios.proyecto.employee.Employee;
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.preference.Preference;
 import com.generador.horarios.proyecto.preference.PreferenceType;
 import com.generador.horarios.proyecto.schedule.Schedule;
@@ -80,7 +81,7 @@ public class ScheduleGenerator {
         for (CoverageSlotGroup group : orderedGroups) {
             int filled = 0;
             for (int i = 0; i < group.requiredCount(); i++) {
-                Employee chosen = pickCandidate(group.date(), group.shiftTemplate(), employees, assignments,
+                Employee chosen = pickCandidate(group.date(), group.shiftTemplate(), group.position(), employees, assignments,
                         preferences, preferencesByEmployee, historicalBadShiftCounts, currentBadShiftCounts, schedule, weekStart);
                 if (chosen == null) {
                     break;
@@ -123,8 +124,10 @@ public class ScheduleGenerator {
                     long availableCandidates = employees.stream()
                             .filter(Employee::isActive)
                             .filter(e -> !unavailable.contains(new EmployeeDateKey(e.getId(), date)))
+                            .filter(e -> hasRequiredPosition(e, requirement.getPosition()))
                             .count();
-                    return new CoverageSlotGroup(date, requirement.getShiftTemplate(), requirement.getRequiredCount(), availableCandidates);
+                    return new CoverageSlotGroup(
+                            date, requirement.getShiftTemplate(), requirement.getPosition(), requirement.getRequiredCount(), availableCandidates);
                 })
                 .toList();
 
@@ -141,12 +144,13 @@ public class ScheduleGenerator {
      * libranzas agrupadas). En empate desempata por employeeId ascendente.
      */
     private Employee pickCandidate(
-            LocalDate date, ShiftTemplate shiftTemplate, List<Employee> employees, List<ShiftAssignment> currentAssignments,
+            LocalDate date, ShiftTemplate shiftTemplate, Position position, List<Employee> employees, List<ShiftAssignment> currentAssignments,
             List<Preference> preferences, Map<Long, List<Preference>> preferencesByEmployee,
             Map<Long, Integer> historicalBadShiftCounts, Map<Long, Integer> currentBadShiftCounts,
             Schedule schedule, LocalDate weekStart) {
         return employees.stream()
                 .filter(Employee::isActive)
+                .filter(employee -> hasRequiredPosition(employee, position))
                 .filter(employee -> canAssign(employee, shiftTemplate, date, currentAssignments, preferences, schedule, weekStart))
                 .max(Comparator
                         .<Employee>comparingInt(employee -> preferenceScore(employee, date, shiftTemplate, preferencesByEmployee)
@@ -301,9 +305,15 @@ public class ScheduleGenerator {
         return weekStart.plusDays(dayOfWeek.getValue() - DayOfWeek.MONDAY.getValue());
     }
 
+    /** null = hueco sin puesto exigido (T5.3): cualquier empleado activo es candidato, como antes. */
+    private boolean hasRequiredPosition(Employee employee, Position position) {
+        return position == null || employee.getPositions().contains(position);
+    }
+
     private record EmployeeDateKey(Long employeeId, LocalDate date) {
     }
 
-    private record CoverageSlotGroup(LocalDate date, ShiftTemplate shiftTemplate, int requiredCount, long availableCandidates) {
+    private record CoverageSlotGroup(
+            LocalDate date, ShiftTemplate shiftTemplate, Position position, int requiredCount, long availableCandidates) {
     }
 }

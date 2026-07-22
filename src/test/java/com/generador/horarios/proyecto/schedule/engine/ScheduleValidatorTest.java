@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.preference.Preference;
 import com.generador.horarios.proyecto.preference.PreferenceType;
 import com.generador.horarios.proyecto.shift.ShiftAssignment;
@@ -15,6 +16,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -262,6 +264,37 @@ class ScheduleValidatorTest {
     @Test
     void doesNotFlagCoverageWhenRequirementIsMet() {
         CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+        List<ShiftAssignment> assignments = List.of(assignment(fullTimeEmployee, tarde, MONDAY));
+
+        List<ConstraintViolation> violations =
+                validator.validate(assignments, List.of(), List.of(requirement), MONDAY);
+
+        assertThat(violations).noneMatch(v -> v.ruleId().equals("H7"));
+    }
+
+    @Test
+    void flagsInsufficientCoverageForARequiredPositionEvenWhenHeadcountIsMet() {
+        Employee waiter = new Employee("Bea", "bea@test.com", ContractType.FULL_TIME, null, venue);
+        waiter.setPositions(Set.of(Position.CAMARERO));
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+        requirement.setPosition(Position.COCINERO);
+        // fullTimeEmployee no tiene puesto asignado, así que no cuenta como cocinero aunque cubra el hueco en número.
+        List<ShiftAssignment> assignments = List.of(assignment(fullTimeEmployee, tarde, MONDAY));
+
+        List<ConstraintViolation> violations =
+                validator.validate(assignments, List.of(), List.of(requirement), MONDAY);
+
+        assertThat(violations).anySatisfy(v -> {
+            assertThat(v.ruleId()).isEqualTo("H7");
+            assertThat(v.severity()).isEqualTo(Severity.SOFT);
+        });
+    }
+
+    @Test
+    void doesNotFlagCoverageWhenTheAssignedEmployeeHasTheRequiredPosition() {
+        fullTimeEmployee.setPositions(Set.of(Position.COCINERO));
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+        requirement.setPosition(Position.COCINERO);
         List<ShiftAssignment> assignments = List.of(assignment(fullTimeEmployee, tarde, MONDAY));
 
         List<ConstraintViolation> violations =

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.shift.ShiftSegment;
 import com.generador.horarios.proyecto.shift.ShiftTemplate;
 import com.generador.horarios.proyecto.shift.ShiftTemplateRepository;
@@ -58,11 +59,11 @@ class CoverageRequirementServiceTest {
 
     @Test
     void createsCoverageRequirement() {
-        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3);
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
         when(coverageRequirementRepository.findByVenueIdAndDayOfWeekAndShiftTemplateId(1L, DayOfWeek.FRIDAY, 100L))
-                .thenReturn(Optional.empty());
+                .thenReturn(List.of());
         when(coverageRequirementRepository.save(any(CoverageRequirement.class))).thenAnswer(invocation -> {
             CoverageRequirement saved = invocation.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 500L);
@@ -73,11 +74,12 @@ class CoverageRequirementServiceTest {
 
         assertThat(response.id()).isEqualTo(500L);
         assertThat(response.requiredCount()).isEqualTo(3);
+        assertThat(response.position()).isNull();
     }
 
     @Test
     void rejectsShiftTemplateFromAnotherVenue() {
-        CoverageRequirementRequest request = new CoverageRequirementRequest(2L, DayOfWeek.FRIDAY, 100L, 3);
+        CoverageRequirementRequest request = new CoverageRequirementRequest(2L, DayOfWeek.FRIDAY, 100L, 3, null);
         when(venueRepository.findById(2L)).thenReturn(Optional.of(otherVenue));
         when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
 
@@ -89,7 +91,7 @@ class CoverageRequirementServiceTest {
     @Test
     void rejectsInactiveShiftTemplate() {
         shiftTemplate.setActive(false);
-        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3);
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
 
@@ -100,14 +102,52 @@ class CoverageRequirementServiceTest {
 
     @Test
     void rejectsDuplicateCombinationOnCreate() {
-        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3);
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 3, null);
         CoverageRequirement existing = new CoverageRequirement(venue, DayOfWeek.FRIDAY, shiftTemplate, 2);
         ReflectionTestUtils.setField(existing, "id", 500L);
 
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
         when(coverageRequirementRepository.findByVenueIdAndDayOfWeekAndShiftTemplateId(1L, DayOfWeek.FRIDAY, 100L))
-                .thenReturn(Optional.of(existing));
+                .thenReturn(List.of(existing));
+
+        assertThatThrownBy(() -> coverageRequirementService.create(request))
+                .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void allowsDifferentPositionsForSameDayAndShift() {
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 2, Position.COCINERO);
+        CoverageRequirement existingForCamarero = new CoverageRequirement(venue, DayOfWeek.FRIDAY, shiftTemplate, 3);
+        existingForCamarero.setPosition(Position.CAMARERO);
+        ReflectionTestUtils.setField(existingForCamarero, "id", 500L);
+
+        when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
+        when(coverageRequirementRepository.findByVenueIdAndDayOfWeekAndShiftTemplateId(1L, DayOfWeek.FRIDAY, 100L))
+                .thenReturn(List.of(existingForCamarero));
+        when(coverageRequirementRepository.save(any(CoverageRequirement.class))).thenAnswer(invocation -> {
+            CoverageRequirement saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 501L);
+            return saved;
+        });
+
+        CoverageRequirementResponse response = coverageRequirementService.create(request);
+
+        assertThat(response.position()).isEqualTo(Position.COCINERO);
+    }
+
+    @Test
+    void rejectsDuplicateSamePositionOnCreate() {
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 2, Position.CAMARERO);
+        CoverageRequirement existing = new CoverageRequirement(venue, DayOfWeek.FRIDAY, shiftTemplate, 3);
+        existing.setPosition(Position.CAMARERO);
+        ReflectionTestUtils.setField(existing, "id", 500L);
+
+        when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
+        when(coverageRequirementRepository.findByVenueIdAndDayOfWeekAndShiftTemplateId(1L, DayOfWeek.FRIDAY, 100L))
+                .thenReturn(List.of(existing));
 
         assertThatThrownBy(() -> coverageRequirementService.create(request))
                 .isInstanceOf(ResponseStatusException.class);
@@ -117,13 +157,13 @@ class CoverageRequirementServiceTest {
     void allowsUpdatingItsOwnCombination() {
         CoverageRequirement existing = new CoverageRequirement(venue, DayOfWeek.FRIDAY, shiftTemplate, 2);
         ReflectionTestUtils.setField(existing, "id", 500L);
-        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 5);
+        CoverageRequirementRequest request = new CoverageRequirementRequest(1L, DayOfWeek.FRIDAY, 100L, 5, null);
 
         when(coverageRequirementRepository.findById(500L)).thenReturn(Optional.of(existing));
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(shiftTemplate));
         when(coverageRequirementRepository.findByVenueIdAndDayOfWeekAndShiftTemplateId(1L, DayOfWeek.FRIDAY, 100L))
-                .thenReturn(Optional.of(existing));
+                .thenReturn(List.of(existing));
 
         CoverageRequirementResponse response = coverageRequirementService.update(500L, request);
 

@@ -1,5 +1,6 @@
 package com.generador.horarios.proyecto.venue;
 
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.shift.ShiftTemplate;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,6 +41,11 @@ public class CoverageRequirement {
 
     @Column(name = "required_count", nullable = false)
     private int requiredCount;
+
+    /** null = cualquier puesto (cuenta cabezas sin más, comportamiento previo a T5.3). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "position")
+    private Position position;
 
     protected CoverageRequirement() {
     }
@@ -85,5 +91,13 @@ public class CoverageRequirement {
 
     public void setRequiredCount(int requiredCount) {
         this.requiredCount = requiredCount;
+    }
+
+    public Position getPosition() {
+        return position;
+    }
+
+    public void setPosition(Position position) {
+        this.position = position;
     }
 }

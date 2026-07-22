@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.preference.Preference;
 import com.generador.horarios.proyecto.preference.PreferenceType;
 import com.generador.horarios.proyecto.schedule.Schedule;
@@ -16,6 +17,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -65,6 +67,36 @@ class ScheduleGeneratorTest {
 
         assertThat(result.assignments()).hasSize(1);
         assertThat(result.uncoveredSlots()).containsExactly(new UncoveredSlot(MONDAY, manana.getId(), 2));
+    }
+
+    @Test
+    void onlyAssignsCandidatesWithTheRequiredPosition() {
+        Employee cook = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        cook.setPositions(Set.of(Position.COCINERO));
+        Employee waiter = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        waiter.setPositions(Set.of(Position.CAMARERO));
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+        requirement.setPosition(Position.CAMARERO);
+
+        GenerationResult result = generate(List.of(cook, waiter), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).hasSize(1);
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void leavesSlotUncoveredWhenNoOneHasTheRequiredPositionEvenWithEnoughHeadcount() {
+        Employee cookOne = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        cookOne.setPositions(Set.of(Position.COCINERO));
+        Employee cookTwo = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        cookTwo.setPositions(Set.of(Position.COCINERO));
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+        requirement.setPosition(Position.CAMARERO);
+
+        GenerationResult result = generate(List.of(cookOne, cookTwo), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).isEmpty();
+        assertThat(result.uncoveredSlots()).containsExactly(new UncoveredSlot(MONDAY, manana.getId(), 1));
     }
 
     @Test

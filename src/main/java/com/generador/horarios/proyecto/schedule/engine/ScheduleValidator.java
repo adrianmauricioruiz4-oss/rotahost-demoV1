@@ -201,10 +201,12 @@ public class ScheduleValidator {
             long assignedCount = assignments.stream()
                     .filter(a -> a.getDate().getDayOfWeek() == requirement.getDayOfWeek())
                     .filter(a -> a.getShiftTemplate().getId().equals(requirement.getShiftTemplate().getId()))
+                    .filter(a -> requirement.getPosition() == null || a.getEmployee().getPositions().contains(requirement.getPosition()))
                     .count();
             if (assignedCount < requirement.getRequiredCount()) {
+                String positionSuffix = requirement.getPosition() != null ? " (" + requirement.getPosition() + ")" : "";
                 violations.add(new ConstraintViolation("H7", Severity.SOFT,
-                        "Cobertura insuficiente en " + requirement.getShiftTemplate().getName() + " el "
+                        "Cobertura insuficiente en " + requirement.getShiftTemplate().getName() + positionSuffix + " el "
                                 + requirement.getDayOfWeek() + ": hacen falta " + requirement.getRequiredCount()
                                 + ", hay " + assignedCount,
                         null, null));

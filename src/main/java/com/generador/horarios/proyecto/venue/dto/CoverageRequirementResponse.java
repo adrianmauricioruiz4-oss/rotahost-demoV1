@@ -1,5 +1,6 @@
 package com.generador.horarios.proyecto.venue.dto;
 
+import com.generador.horarios.proyecto.employee.Position;
 import java.time.DayOfWeek;
 
 public record CoverageRequirementResponse(
@@ -7,6 +8,7 @@ public record CoverageRequirementResponse(
         Long venueId,
         DayOfWeek dayOfWeek,
         Long shiftTemplateId,
-        int requiredCount
+        int requiredCount,
+        Position position
 ) {
 }
