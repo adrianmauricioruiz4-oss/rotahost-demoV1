@@ -422,6 +422,10 @@ button {
     font-size: var(--fs-base);
 }
 
+.print-header {
+    display: none;
+}
+
 .board-grid {
     display: grid;
     grid-template-columns: 1fr 300px;
@@ -1113,5 +1117,68 @@ main {
     .schedule-table td {
         padding: 0.5rem;
         font-size: 0.8rem;
+    }
+}
+
+/* ============================================================
+   Impresión / exportar a PDF (T3.6): solo el cuadrante, sin chrome de la app
+   ============================================================ */
+@media print {
+    .sidebar, .topbar, .head, .panel, .pop, .toasts, .empty-state {
+        display: none !important;
+    }
+
+    .app {
+        display: block;
+    }
+
+    .content {
+        padding: 0;
+    }
+
+    .print-header {
+        display: block;
+        margin-bottom: var(--space-6);
+    }
+
+    .print-header h1 {
+        margin: 0;
+        font-size: 20px;
+    }
+
+    .print-header p {
+        margin: 4px 0 0;
+        color: #444;
+        font-size: 12px;
+    }
+
+    .board-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .table-wrap {
+        border: none;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    table.grid {
+        min-width: 0;
+    }
+
+    table.grid thead th,
+    th.name-col,
+    td.name-col {
+        position: static;
+        background: #fff;
+    }
+
+    table.grid tr {
+        break-inside: avoid;
+    }
+
+    @page {
+        size: landscape;
+        margin: 12mm;
     }
 }

@@ -51,6 +51,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                     Publicar
                 </button>
+                <button class="btn btn-ghost" id="print-button" type="button" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+                    Imprimir / PDF
+                </button>
             </div>
 
             <div class="content">
@@ -59,6 +63,11 @@
                         <h1>Cuadrante semanal</h1>
                         <p id="board-sub">Elige un venue y una semana para ver o generar su cuadrante.</p>
                     </div>
+                </div>
+
+                <div id="print-header" class="print-header">
+                    <h1 id="print-title"></h1>
+                    <p id="print-subtitle"></p>
                 </div>
 
                 <div id="board-body" style="display:none">

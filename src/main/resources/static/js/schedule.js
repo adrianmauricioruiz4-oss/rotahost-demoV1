@@ -187,7 +187,10 @@ function getIsoWeek() {
 /* ---------- render: cabecera, leyenda, rejilla ---------- */
 
 function renderWeekLabel() {
-    document.getElementById("wk-sub").textContent = formatDateRangeLabel(currentDays);
+    const rangeLabel = formatDateRangeLabel(currentDays);
+    document.getElementById("wk-sub").textContent = rangeLabel;
+    document.getElementById("print-subtitle").textContent =
+        `Semana ${currentIsoWeek}/${currentIsoYear} · ${rangeLabel}`;
 }
 
 function renderLegend() {
@@ -532,17 +535,20 @@ function appendPanelHint(list, message) {
 function renderTopbarActions() {
     const generateButton = document.getElementById("generate-button");
     const publishButton = document.getElementById("publish-button");
+    const printButton = document.getElementById("print-button");
     const badge = document.getElementById("status-badge");
 
     if (!currentScheduleStatus) {
         generateButton.hidden = false;
         publishButton.hidden = true;
+        printButton.hidden = true;
         badge.hidden = true;
         return;
     }
 
     // Ya existe un cuadrante para esta semana: no hay endpoint para regenerarlo.
     generateButton.hidden = true;
+    printButton.hidden = false;
     badge.hidden = false;
     badge.className = "badge " + (currentScheduleStatus === "PUBLISHED" ? "badge-pub" : "badge-draft");
     document.getElementById("status-txt").textContent = currentScheduleStatus === "PUBLISHED" ? "Publicado" : "Borrador";
@@ -589,7 +595,10 @@ async function applyState(data) {
     showBoard();
 
     fetchJson(`/api/venues/${data.venueId}`)
-        .then((venue) => { if (window.updateShellVenueName) window.updateShellVenueName(venue.name); })
+        .then((venue) => {
+            if (window.updateShellVenueName) window.updateShellVenueName(venue.name);
+            document.getElementById("print-title").textContent = venue.name;
+        })
         .catch(() => {});
 }
 
@@ -708,6 +717,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("generate-button").addEventListener("click", generateWeek);
     document.getElementById("empty-generate-button").addEventListener("click", generateWeek);
     document.getElementById("publish-button").addEventListener("click", publishSchedule);
+    document.getElementById("print-button").addEventListener("click", () => {
+        closePopover();
+        window.print();
+    });
 
     document.getElementById("schedule-body").addEventListener("click", (event) => {
         const cell = event.target.closest("td.cell");

@@ -184,7 +184,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T3.3 — **Edición manual**: cambiar una asignación revalida al vuelo y avisa en rojo si rompe una dura
 - [x] T3.4 — Publicar cuadrante (`DRAFT` → `PUBLISHED`, bloquea edición)
 - [x] T3.5 — Vista del empleado: mi semana + gestionar mis preferencias
-- [ ] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)
+- [x] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)
 - [x] T3.7 — Mostrar horas de entrada/salida de cada turno en el cuadrante semanal
 - [x] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
 
