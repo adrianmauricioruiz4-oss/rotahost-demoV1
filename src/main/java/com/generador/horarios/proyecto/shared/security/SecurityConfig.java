@@ -39,6 +39,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/login.html", "/css/**", "/js/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**")
                         .hasRole("MANAGER")
@@ -52,13 +53,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/schedules/generate", "/api/schedules/*/publish")
                         .hasRole("MANAGER")
                         .anyRequest().authenticated())
-                .formLogin(Customizer.withDefaults())
+                .formLogin(form -> form.loginPage("/login.html").loginProcessingUrl("/login").permitAll())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exceptions -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                 PathPatternRequestMatcher.pathPattern("/api/**")))
-                .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/login?logout"))
+                .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/login.html?logout"))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
