@@ -1056,6 +1056,55 @@ main {
 }
 
 /* ============================================================
+   Empleados (T5.4)
+   ============================================================ */
+.employee-card-wrapper {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.employee-card-wrapper h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+}
+
+.employee-card.generate-form fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    margin: 0;
+}
+
+.employee-card.generate-form fieldset legend {
+    padding: 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+
+.employee-card .checkbox-label {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.35rem !important;
+    font-size: 0.85rem;
+}
+
+.employee-card textarea {
+    width: 16rem;
+    min-height: 3rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+/* ============================================================
    Login (T4.5)
    ============================================================ */
 .login-body {

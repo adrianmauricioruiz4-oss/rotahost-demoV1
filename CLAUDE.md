@@ -207,7 +207,7 @@ Marca las casillas al completar. Una tarea, un commit.
   de entrada, hora máxima de salida, notas internas del encargado
 - [x] T5.3 — `CoverageRequirement` por puesto (ej. sábado 21–00: 2 camareros + 2 cocineros +
   1 encargado); el generador y el validator deben respetar el puesto requerido, no solo el número
-- [ ] T5.4 — UI: ficha de empleado ampliada con puesto y capacidades
+- [x] T5.4 — UI: ficha de empleado ampliada con puesto y capacidades
 
 ### Fase 6 — Reglas avanzadas del local
 - [ ] T6.1 — Festivos y temporadas/horario especial por venue
