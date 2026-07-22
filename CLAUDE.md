@@ -190,16 +190,69 @@ Marca las casillas al completar. Una tarea, un commit.
 
 ### Fase 4 — Salir al mercado
 - [ ] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
-- [ ] T4.2 — Multi-tenant básico por `venueId`
+- [ ] T4.2 — Multi-tenant básico por `venueId` (un `MANAGER` puede tener varios `Venue`)
 - [ ] T4.3 — Migraciones con Flyway
 - [ ] T4.4 — Deploy (Docker + VPS) + `README.md` público
+- [ ] T4.5 — Pantalla de login (UI de acceso + "recuperar contraseña"; usa la auth real de T4.1)
+- [ ] T4.6 — Panel principal: listado de locales del usuario (nombre, nº empleados, estado del
+  cuadrante de la semana actual, alertas/conflictos pendientes) + alta de nuevo local
+
+### Fase 5 — Empleados: puesto y capacidades
+- [ ] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
+  sala, encargado, repartidor) asignable a Employee (uno o varios puestos por persona)
+- [ ] T5.2 — Capacidades del empleado: puede turno partido, puede apertura/cierre, hora mínima
+  de entrada, hora máxima de salida, notas internas del encargado
+- [ ] T5.3 — `CoverageRequirement` por puesto (ej. sábado 21–00: 2 camareros + 2 cocineros +
+  1 encargado); el generador y el validator deben respetar el puesto requerido, no solo el número
+- [ ] T5.4 — UI: ficha de empleado ampliada con puesto y capacidades
+
+### Fase 6 — Reglas avanzadas del local
+- [ ] T6.1 — Festivos y temporadas/horario especial por venue
+- [ ] T6.2 — Reglas organizativas opcionales configurables: máx. días consecutivos, máx. cierres
+  consecutivos, máx. turnos partidos, mínimo de jornada completa por turno, margen de horas sobre
+  el contrato
+- [ ] T6.3 — Nivel intermedio "flexible" en `ScheduleValidator` (hoy es binario HARD/SOFT):
+  regla que puede incumplirse si no hay otra solución pero genera advertencia visible — **decisión
+  de diseño a confirmar con el usuario antes de tocar el validator**, no asumir semántica
+
+### Fase 7 — Cuadrante: interacciones avanzadas
+- [ ] T7.1 — Arrastrar y soltar turnos entre empleados en la tabla del cuadrante
+- [ ] T7.2 — Copiar el cuadrante de la semana anterior como punto de partida
+- [ ] T7.3 — Duplicar / eliminar un turno individual desde la UI
+- [ ] T7.4 — Bloquear turno (`locked` en ShiftAssignment) para que el generador no lo modifique
+- [ ] T7.5 — Regenerar parcialmente: recalcular solo huecos/turnos no bloqueados de un rango de
+  días sin tocar el resto del cuadrante
+- [ ] T7.6 — Mensajes de conflicto en lenguaje natural por persona (mapear cada
+  `ConstraintViolation` a un texto legible, ej. "María supera sus horas contratadas en 3h")
+
+### Fase 8 — Cambios e incidencias
+- [ ] T8.1 — Entidad `Incident` (tipo: baja, retraso, ausencia, cambio de disponibilidad,
+  solicitud de intercambio, necesidad de refuerzo) + CRUD
+- [ ] T8.2 — Botón "Imprevisto" en la vista de cuadrante + formulario rápido de alta
+- [ ] T8.3 — Motor de reorganización parcial: dado un incidente, identificar turnos afectados y
+  candidatos a cubrirlos sin violar ninguna restricción dura
+- [ ] T8.4 — UI: mostrar la propuesta de reorganización (turnos afectados, candidatos, impacto en
+  horas/descansos) y esperar confirmación explícita del encargado antes de aplicarla
+- [ ] T8.5 — Solicitud de intercambio entre empleados: flujo de petición → aprobación del encargado
+
+### Fase 9 — Acceso empleados: intercambios y fichaje
+- [ ] T9.1 — Aceptar/rechazar propuestas de intercambio desde la vista de empleado
+- [ ] T9.2 — Notificaciones básicas in-app al publicar cuadrante o al recibir una propuesta
+- [ ] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración)
+- [ ] T9.4 — Comparativa horas planificadas vs. horas fichadas
+
+### Fase 10 — Configuración y cuenta
+- [ ] T10.1 — Datos del negocio y gestión de usuarios administradores
+- [ ] T10.2 — Formato horario, zona horaria, idioma
+- [ ] T10.3 — Exportación de datos
+- [ ] T10.4 — Historial de cambios (auditoría básica)
 
 ### Backlog (NO empezar sin pedirlo)
 - LLM para parsear preferencias en lenguaje natural ("el finde del 20 no puedo, tengo boda")
 - LLM para explicar en castellano por qué a Juan le tocó el domingo
-- Notificaciones por WhatsApp/email al publicar
-- Fichaje / control horario
-- Gestión de festivos por CCAA
+- Notificaciones por WhatsApp/email al publicar (T9.2 cubre solo in-app)
+- Código PIN / QR / geolocalización para el fichaje (T9.3 cubre solo el registro simple)
+- Gestión de festivos por CCAA (calendario oficial automático; T6.1 cubre solo festivos manuales)
 
 ---
 
