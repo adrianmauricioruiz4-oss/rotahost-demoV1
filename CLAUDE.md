@@ -190,12 +190,15 @@ Marca las casillas al completar. Una tarea, un commit.
 
 ### Fase 4 — Salir al mercado
 - [x] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
-- [ ] T4.2 — Multi-tenant básico por `venueId` (un `MANAGER` puede tener varios `Venue`)
+- [x] T4.2 — Multi-tenant básico por `venueId`: cada cuenta (MANAGER o EMPLOYEE) pertenece a un único
+  venue (el de su Employee) y no puede leer ni escribir datos de otro, aunque conozca los IDs
 - [x] T4.3 — Migraciones con Flyway
 - [ ] T4.4 — Deploy (Docker + VPS) + `README.md` público
 - [x] T4.5 — Pantalla de login (UI de acceso + "recuperar contraseña"; usa la auth real de T4.1)
-- [ ] T4.6 — Panel principal: listado de locales del usuario (nombre, nº empleados, estado del
-  cuadrante de la semana actual, alertas/conflictos pendientes) + alta de nuevo local
+- [ ] T4.6 — Panel principal: pantalla de inicio tras el login con el resumen del venue propio
+  (nombre, nº empleados, estado del cuadrante de la semana actual, alertas/conflictos pendientes).
+  Sin listado de locales ni alta de local nuevo: T4.2 fijó una cuenta = un venue; soportar varios
+  sería un cambio de modelo de datos (ver Backlog), no una tarea de UI
 
 ### Fase 5 — Empleados: puesto y capacidades
 - [ ] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
@@ -253,6 +256,10 @@ Marca las casillas al completar. Una tarea, un commit.
 - Notificaciones por WhatsApp/email al publicar (T9.2 cubre solo in-app)
 - Código PIN / QR / geolocalización para el fichaje (T9.3 cubre solo el registro simple)
 - Gestión de festivos por CCAA (calendario oficial automático; T6.1 cubre solo festivos manuales)
+- Una cuenta gestionando varios venues (cadenas/multi-local). T4.2 decidió deliberadamente una
+  cuenta = un venue para V1 (encaja con el Employee-con-credenciales de T4.1 y con el público
+  objetivo del CLAUDE.md); soportarlo exigiría desligar "usuario" de "empleado" (entidad User
+  separada o Employee↔Venue N:M), no un simple cambio de UI
 
 ---
 

@@ -99,6 +99,14 @@ public class ScheduleService {
                 schedule.getStatus().name(), assignments);
     }
 
+    /** Para que el controller pueda comprobar el venue antes de editar/publicar, sin exponer la entidad. */
+    @Transactional(readOnly = true)
+    public Long resolveVenueId(Long scheduleId) {
+        return scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Schedule no encontrado: " + scheduleId))
+                .getVenue().getId();
+    }
+
     @Transactional
     public ScheduleGenerationResponse generate(GenerateScheduleRequest request) {
         Venue venue = venueRepository.findById(request.venueId())

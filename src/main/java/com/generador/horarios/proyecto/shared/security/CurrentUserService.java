@@ -28,14 +28,35 @@ public class CurrentUserService {
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + EmployeeRole.MANAGER.name()));
     }
 
-    /** Lanza 403 si no es MANAGER y el employeeId objetivo no es el suyo propio. */
+    /** Cada cuenta pertenece a un único venue (el de su Employee); no hay cuentas multi-venue. */
+    public Long currentVenueId(Authentication authentication) {
+        return currentEmployee(authentication).getVenue().getId();
+    }
+
+    /** Lanza 403 si el venue objetivo no es el propio. Se aplica a MANAGER y EMPLOYEE por igual. */
+    public void requireOwnVenue(Long targetVenueId, Authentication authentication) {
+        if (!currentVenueId(authentication).equals(targetVenueId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes acceso a datos de otro venue");
+        }
+    }
+
+    /**
+     * Lanza 403 salvo que: (a) el objetivo seas tú mismo, o (b) seas MANAGER del mismo venue que
+     * el empleado objetivo. Un MANAGER de un venue no puede tocar empleados de otro venue.
+     */
     public void requireOwnershipOrManager(Long targetEmployeeId, Authentication authentication) {
-        if (isManager(authentication)) {
+        Employee current = currentEmployee(authentication);
+        if (current.getId().equals(targetEmployeeId)) {
             return;
         }
-        Long ownId = currentEmployee(authentication).getId();
-        if (!ownId.equals(targetEmployeeId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes modificar datos de otro empleado");
+        if (isManager(authentication)) {
+            Employee target = employeeRepository.findById(targetEmployeeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Employee no encontrado: " + targetEmployeeId));
+            if (current.getVenue().getId().equals(target.getVenue().getId())) {
+                return;
+            }
         }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes modificar datos de otro empleado");
     }
 }

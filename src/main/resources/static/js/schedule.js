@@ -186,8 +186,9 @@ function groupAssignments(assignments) {
 
 /* ---------- inputs del topbar ---------- */
 
+/** El venue no se elige a mano: es el del encargado autenticado (ver /api/auth/me en el init). */
 function getVenueId() {
-    return Number(document.getElementById("venue-id-input").value);
+    return currentVenueId;
 }
 
 function getIsoYear() {
@@ -719,17 +720,10 @@ function shiftWeek(delta) {
 /* ---------- init ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
-    fetchJson("/api/auth/me").then((me) => {
-        if (me.role !== "MANAGER") {
-            window.location.href = "employee.html";
-        }
-    }).catch(() => {});
-
     const { isoYear, isoWeek } = currentIsoYearWeek();
     document.getElementById("iso-year-input").value = isoYear;
     document.getElementById("iso-week-input").value = isoWeek;
 
-    document.getElementById("venue-id-input").addEventListener("change", loadExistingWeek);
     document.getElementById("iso-year-input").addEventListener("change", loadExistingWeek);
     document.getElementById("iso-week-input").addEventListener("change", loadExistingWeek);
     document.getElementById("wk-prev").addEventListener("click", () => shiftWeek(-1));
@@ -757,5 +751,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     window.addEventListener("scroll", closePopover, true);
 
-    loadExistingWeek();
+    fetchJson("/api/auth/me").then((me) => {
+        if (me.role !== "MANAGER") {
+            window.location.href = "employee.html";
+            return;
+        }
+        currentVenueId = me.venueId;
+        loadExistingWeek();
+    }).catch((error) => showToast(error.message, "warn"));
 });

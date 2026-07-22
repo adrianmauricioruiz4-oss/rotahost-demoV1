@@ -32,6 +32,8 @@ async function fetchJson(url, options) {
     return response.json();
 }
 
+let currentVenueId = null;
+
 /** "08:00:00" -> "08:00" (formato que aceptan los <input type="time">). */
 function toTimeInputValue(localTime) {
     return localTime.slice(0, 5);
@@ -161,32 +163,15 @@ document.addEventListener("DOMContentLoaded", () => {
         logout();
     });
 
-    fetchJson("/api/auth/me").then((me) => {
-        if (me.role !== "MANAGER") {
-            window.location.href = "employee.html";
-        }
-    }).catch(() => {});
-
-    document.getElementById("venue-lookup-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const venueId = Number(document.getElementById("venue-id-input").value);
-        try {
-            await loadVenueAndShifts(venueId);
-        } catch (error) {
-            setStatusMessage(error.message, true);
-        }
-    });
-
     document.getElementById("venue-edit-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const venueId = Number(document.getElementById("venue-id-input").value);
         const body = {
             name: document.getElementById("venue-name-input").value,
             openingTime: document.getElementById("venue-opening-input").value,
             closingTime: document.getElementById("venue-closing-input").value
         };
         try {
-            await fetchJson(`/api/venues/${venueId}`, {
+            await fetchJson(`/api/venues/${currentVenueId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
@@ -197,6 +182,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    const initialVenueId = Number(document.getElementById("venue-id-input").value);
-    loadVenueAndShifts(initialVenueId).catch((error) => setStatusMessage(error.message, true));
+    fetchJson("/api/auth/me").then((me) => {
+        if (me.role !== "MANAGER") {
+            window.location.href = "employee.html";
+            return;
+        }
+        currentVenueId = me.venueId;
+        return loadVenueAndShifts(currentVenueId);
+    }).catch((error) => setStatusMessage(error.message, true));
 });
