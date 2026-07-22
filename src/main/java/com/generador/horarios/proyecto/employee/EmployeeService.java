@@ -5,6 +5,7 @@ import com.generador.horarios.proyecto.employee.dto.EmployeeResponse;
 import com.generador.horarios.proyecto.venue.Venue;
 import com.generador.horarios.proyecto.venue.VenueRepository;
 import java.util.List;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ public class EmployeeService {
         Integer contractHours = validateContractHours(request.contractType(), request.contractHours());
 
         Employee employee = new Employee(request.name(), request.email(), request.contractType(), contractHours, venue);
+        employee.setPositions(resolvePositions(request.positions()));
         return toResponse(employeeRepository.save(employee));
     }
 
@@ -65,6 +67,7 @@ public class EmployeeService {
         employee.setContractType(request.contractType());
         employee.setContractHours(contractHours);
         employee.setVenue(venue);
+        employee.setPositions(resolvePositions(request.positions()));
         return toResponse(employee);
     }
 
@@ -73,6 +76,10 @@ public class EmployeeService {
     public void delete(Long id) {
         Employee employee = findEmployeeOrThrow(id);
         employee.setActive(false);
+    }
+
+    private Set<Position> resolvePositions(Set<Position> positions) {
+        return positions == null ? Set.of() : positions;
     }
 
     private Integer validateContractHours(ContractType contractType, Integer contractHours) {
@@ -106,6 +113,7 @@ public class EmployeeService {
                 employee.getContractType(),
                 employee.getContractHours(),
                 employee.isActive(),
-                employee.getVenue().getId());
+                employee.getVenue().getId(),
+                employee.getPositions());
     }
 }

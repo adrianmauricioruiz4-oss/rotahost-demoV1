@@ -1,6 +1,8 @@
 package com.generador.horarios.proyecto.employee.dto;
 
 import com.generador.horarios.proyecto.employee.ContractType;
+import com.generador.horarios.proyecto.employee.Position;
+import java.util.Set;
 
 public record EmployeeResponse(
         Long id,
@@ -9,6 +11,7 @@ public record EmployeeResponse(
         ContractType contractType,
         Integer contractHours,
         boolean active,
-        Long venueId
+        Long venueId,
+        Set<Position> positions
 ) {
 }

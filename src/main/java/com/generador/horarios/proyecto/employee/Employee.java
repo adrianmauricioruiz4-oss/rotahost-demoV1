@@ -1,7 +1,9 @@
 package com.generador.horarios.proyecto.employee;
 
 import com.generador.horarios.proyecto.venue.Venue;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -12,6 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Empleado del venue. contractHours solo aplica a PART_TIME; un FULL_TIME
@@ -52,6 +56,12 @@ public class Employee {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "employee_positions", joinColumns = @JoinColumn(name = "employee_id"))
+    @Column(name = "position", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Set<Position> positions = new HashSet<>();
 
     protected Employee() {
     }
@@ -130,5 +140,13 @@ public class Employee {
 
     public void setRole(EmployeeRole role) {
         this.role = role;
+    }
+
+    public Set<Position> getPositions() {
+        return positions;
+    }
+
+    public void setPositions(Set<Position> positions) {
+        this.positions = positions;
     }
 }

@@ -201,7 +201,7 @@ Marca las casillas al completar. Una tarea, un commit.
   sería un cambio de modelo de datos (ver Backlog), no una tarea de UI
 
 ### Fase 5 — Empleados: puesto y capacidades
-- [ ] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
+- [x] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
   sala, encargado, repartidor) asignable a Employee (uno o varios puestos por persona)
 - [ ] T5.2 — Capacidades del empleado: puede turno partido, puede apertura/cierre, hora mínima
   de entrada, hora máxima de salida, notas internas del encargado
