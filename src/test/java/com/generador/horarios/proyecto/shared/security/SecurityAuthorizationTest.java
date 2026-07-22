@@ -84,7 +84,7 @@ class SecurityAuthorizationTest {
     @Test
     void employeeCannotCreateEmployees() {
         EmployeeRequest request = new EmployeeRequest(
-                "Nuevo", "nuevo." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venue.getId(), null);
+                "Nuevo", "nuevo." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venue.getId(), null, true, true, true, null, null, null);
 
         ResponseEntity<String> response = as(employeeOne).postForEntity("/api/employees", request, String.class);
 
@@ -94,7 +94,7 @@ class SecurityAuthorizationTest {
     @Test
     void managerCanCreateEmployees() {
         EmployeeRequest request = new EmployeeRequest(
-                "Nuevo", "nuevo." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venue.getId(), null);
+                "Nuevo", "nuevo." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venue.getId(), null, true, true, true, null, null, null);
 
         ResponseEntity<String> response = as(manager).postForEntity("/api/employees", request, String.class);
 

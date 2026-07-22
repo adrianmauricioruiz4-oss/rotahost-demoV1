@@ -71,7 +71,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void validationFailureReturnsFieldDetails() {
-        EmployeeRequest invalidRequest = new EmployeeRequest("", "no-es-un-email", ContractType.FULL_TIME, null, 1L, null);
+        EmployeeRequest invalidRequest = new EmployeeRequest("", "no-es-un-email", ContractType.FULL_TIME, null, 1L, null, true, true, true, null, null, null);
 
         ResponseEntity<ApiError> response = managerRestTemplate.postForEntity("/api/employees", invalidRequest, ApiError.class);
 

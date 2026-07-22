@@ -5,6 +5,7 @@ import com.generador.horarios.proyecto.employee.Position;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalTime;
 import java.util.Set;
 
 /**
@@ -18,6 +19,12 @@ public record EmployeeRequest(
         @NotNull ContractType contractType,
         Integer contractHours,
         @NotNull Long venueId,
-        Set<Position> positions
+        Set<Position> positions,
+        boolean canWorkSplitShift,
+        boolean canOpen,
+        boolean canClose,
+        LocalTime minEntryTime,
+        LocalTime maxExitTime,
+        String internalNotes
 ) {
 }

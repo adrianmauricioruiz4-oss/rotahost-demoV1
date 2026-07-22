@@ -87,7 +87,7 @@ class VenueScopingTest {
     @Test
     void managerCannotCreateEmployeeInAnotherVenue() {
         EmployeeRequest request = new EmployeeRequest(
-                "Intruso", "intruso." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venueB.getId(), null);
+                "Intruso", "intruso." + UUID.randomUUID() + "@test.com", ContractType.FULL_TIME, null, venueB.getId(), null, true, true, true, null, null, null);
 
         ResponseEntity<String> response = asManagerA().postForEntity("/api/employees", request, String.class);
 
@@ -97,7 +97,7 @@ class VenueScopingTest {
     @Test
     void managerCannotEditEmployeeOfAnotherVenue() {
         EmployeeRequest request = new EmployeeRequest(
-                employeeB.getName(), employeeB.getEmail(), ContractType.FULL_TIME, null, venueB.getId(), null);
+                employeeB.getName(), employeeB.getEmail(), ContractType.FULL_TIME, null, venueB.getId(), null, true, true, true, null, null, null);
 
         ResponseEntity<String> response = asManagerA().exchange(
                 "/api/employees/" + employeeB.getId(), org.springframework.http.HttpMethod.PUT,

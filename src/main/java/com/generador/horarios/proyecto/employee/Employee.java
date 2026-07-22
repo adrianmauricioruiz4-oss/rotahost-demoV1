@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -62,6 +63,28 @@ public class Employee {
     @Column(name = "position", nullable = false)
     @Enumerated(EnumType.STRING)
     private Set<Position> positions = new HashSet<>();
+
+    /**
+     * Capacidades (T5.2). Los booleanos parten en true (flexible por defecto): hasta que T5.3
+     * los use de verdad para filtrar candidatos, no deben excluir a nadie de nada.
+     */
+    @Column(name = "can_work_split_shift", nullable = false)
+    private boolean canWorkSplitShift = true;
+
+    @Column(name = "can_open", nullable = false)
+    private boolean canOpen = true;
+
+    @Column(name = "can_close", nullable = false)
+    private boolean canClose = true;
+
+    @Column(name = "min_entry_time")
+    private LocalTime minEntryTime;
+
+    @Column(name = "max_exit_time")
+    private LocalTime maxExitTime;
+
+    @Column(name = "internal_notes", length = 2000)
+    private String internalNotes;
 
     protected Employee() {
     }
@@ -148,5 +171,53 @@ public class Employee {
 
     public void setPositions(Set<Position> positions) {
         this.positions = positions;
+    }
+
+    public boolean isCanWorkSplitShift() {
+        return canWorkSplitShift;
+    }
+
+    public void setCanWorkSplitShift(boolean canWorkSplitShift) {
+        this.canWorkSplitShift = canWorkSplitShift;
+    }
+
+    public boolean isCanOpen() {
+        return canOpen;
+    }
+
+    public void setCanOpen(boolean canOpen) {
+        this.canOpen = canOpen;
+    }
+
+    public boolean isCanClose() {
+        return canClose;
+    }
+
+    public void setCanClose(boolean canClose) {
+        this.canClose = canClose;
+    }
+
+    public LocalTime getMinEntryTime() {
+        return minEntryTime;
+    }
+
+    public void setMinEntryTime(LocalTime minEntryTime) {
+        this.minEntryTime = minEntryTime;
+    }
+
+    public LocalTime getMaxExitTime() {
+        return maxExitTime;
+    }
+
+    public void setMaxExitTime(LocalTime maxExitTime) {
+        this.maxExitTime = maxExitTime;
+    }
+
+    public String getInternalNotes() {
+        return internalNotes;
+    }
+
+    public void setInternalNotes(String internalNotes) {
+        this.internalNotes = internalNotes;
     }
 }

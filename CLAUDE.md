@@ -203,7 +203,7 @@ Marca las casillas al completar. Una tarea, un commit.
 ### Fase 5 — Empleados: puesto y capacidades
 - [x] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
   sala, encargado, repartidor) asignable a Employee (uno o varios puestos por persona)
-- [ ] T5.2 — Capacidades del empleado: puede turno partido, puede apertura/cierre, hora mínima
+- [x] T5.2 — Capacidades del empleado: puede turno partido, puede apertura/cierre, hora mínima
   de entrada, hora máxima de salida, notas internas del encargado
 - [ ] T5.3 — `CoverageRequirement` por puesto (ej. sábado 21–00: 2 camareros + 2 cocineros +
   1 encargado); el generador y el validator deben respetar el puesto requerido, no solo el número

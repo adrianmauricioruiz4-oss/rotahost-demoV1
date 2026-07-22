@@ -2,6 +2,7 @@ package com.generador.horarios.proyecto.employee.dto;
 
 import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Position;
+import java.time.LocalTime;
 import java.util.Set;
 
 public record EmployeeResponse(
@@ -12,6 +13,12 @@ public record EmployeeResponse(
         Integer contractHours,
         boolean active,
         Long venueId,
-        Set<Position> positions
+        Set<Position> positions,
+        boolean canWorkSplitShift,
+        boolean canOpen,
+        boolean canClose,
+        LocalTime minEntryTime,
+        LocalTime maxExitTime,
+        String internalNotes
 ) {
 }

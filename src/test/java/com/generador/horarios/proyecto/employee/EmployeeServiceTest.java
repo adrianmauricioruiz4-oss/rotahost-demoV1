@@ -43,7 +43,7 @@ class EmployeeServiceTest {
 
     @Test
     void createsFullTimeEmployee() {
-        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, null, true, true, true, null, null, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(false);
         when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
@@ -64,7 +64,8 @@ class EmployeeServiceTest {
     @Test
     void createsEmployeeWithPositions() {
         EmployeeRequest request = new EmployeeRequest(
-                "Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, Set.of(Position.CAMARERO, Position.ENCARGADO));
+                "Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, Set.of(Position.CAMARERO, Position.ENCARGADO),
+                true, true, true, null, null, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(false);
         when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
@@ -79,12 +80,36 @@ class EmployeeServiceTest {
     }
 
     @Test
+    void createsEmployeeWithCapabilities() {
+        EmployeeRequest request = new EmployeeRequest(
+                "Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, null,
+                false, true, false, LocalTime.of(9, 0), LocalTime.of(23, 0), "Solo puede mañanas entre semana");
+        when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
+        when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(false);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> {
+            Employee saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 10L);
+            return saved;
+        });
+
+        EmployeeResponse response = employeeService.create(request);
+
+        assertThat(response.canWorkSplitShift()).isFalse();
+        assertThat(response.canOpen()).isTrue();
+        assertThat(response.canClose()).isFalse();
+        assertThat(response.minEntryTime()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(response.maxExitTime()).isEqualTo(LocalTime.of(23, 0));
+        assertThat(response.internalNotes()).isEqualTo("Solo puede mañanas entre semana");
+    }
+
+    @Test
     void updateReplacesPositions() {
         Employee existing = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(existing, "id", 10L);
         existing.setPositions(Set.of(Position.CAMARERO));
         EmployeeRequest request = new EmployeeRequest(
-                "Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, Set.of(Position.COCINERO));
+                "Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, Set.of(Position.COCINERO),
+                true, true, true, null, null, null);
 
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(existing));
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
@@ -97,7 +122,7 @@ class EmployeeServiceTest {
 
     @Test
     void rejectsDuplicateEmailOnCreate() {
-        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 1L, null, true, true, true, null, null, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(true);
 
@@ -108,7 +133,7 @@ class EmployeeServiceTest {
 
     @Test
     void rejectsUnknownVenueOnCreate() {
-        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 99L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, null, 99L, null, true, true, true, null, null, null);
         when(venueRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> employeeService.create(request))
@@ -117,7 +142,7 @@ class EmployeeServiceTest {
 
     @Test
     void requiresContractHoursForPartTime() {
-        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.PART_TIME, null, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.PART_TIME, null, 1L, null, true, true, true, null, null, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(false);
 
@@ -128,7 +153,7 @@ class EmployeeServiceTest {
 
     @Test
     void rejectsContractHoursForFullTime() {
-        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, 20, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "ana@test.com", ContractType.FULL_TIME, 20, 1L, null, true, true, true, null, null, null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
         when(employeeRepository.existsByEmail("ana@test.com")).thenReturn(false);
 
@@ -141,7 +166,7 @@ class EmployeeServiceTest {
     void allowsKeepingOwnEmailOnUpdate() {
         Employee existing = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(existing, "id", 10L);
-        EmployeeRequest request = new EmployeeRequest("Ana Updated", "ana@test.com", ContractType.FULL_TIME, null, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana Updated", "ana@test.com", ContractType.FULL_TIME, null, 1L, null, true, true, true, null, null, null);
 
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(existing));
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
@@ -159,7 +184,7 @@ class EmployeeServiceTest {
         Employee other = new Employee("Bea", "bea@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(other, "id", 20L);
 
-        EmployeeRequest request = new EmployeeRequest("Ana", "bea@test.com", ContractType.FULL_TIME, null, 1L, null);
+        EmployeeRequest request = new EmployeeRequest("Ana", "bea@test.com", ContractType.FULL_TIME, null, 1L, null, true, true, true, null, null, null);
 
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(existing));
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));

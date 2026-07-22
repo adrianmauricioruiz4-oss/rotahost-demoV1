@@ -36,6 +36,7 @@ public class EmployeeService {
 
         Employee employee = new Employee(request.name(), request.email(), request.contractType(), contractHours, venue);
         employee.setPositions(resolvePositions(request.positions()));
+        applyCapabilities(employee, request);
         return toResponse(employeeRepository.save(employee));
     }
 
@@ -68,6 +69,7 @@ public class EmployeeService {
         employee.setContractHours(contractHours);
         employee.setVenue(venue);
         employee.setPositions(resolvePositions(request.positions()));
+        applyCapabilities(employee, request);
         return toResponse(employee);
     }
 
@@ -80,6 +82,15 @@ public class EmployeeService {
 
     private Set<Position> resolvePositions(Set<Position> positions) {
         return positions == null ? Set.of() : positions;
+    }
+
+    private void applyCapabilities(Employee employee, EmployeeRequest request) {
+        employee.setCanWorkSplitShift(request.canWorkSplitShift());
+        employee.setCanOpen(request.canOpen());
+        employee.setCanClose(request.canClose());
+        employee.setMinEntryTime(request.minEntryTime());
+        employee.setMaxExitTime(request.maxExitTime());
+        employee.setInternalNotes(request.internalNotes());
     }
 
     private Integer validateContractHours(ContractType contractType, Integer contractHours) {
@@ -114,6 +125,12 @@ public class EmployeeService {
                 employee.getContractHours(),
                 employee.isActive(),
                 employee.getVenue().getId(),
-                employee.getPositions());
+                employee.getPositions(),
+                employee.isCanWorkSplitShift(),
+                employee.isCanOpen(),
+                employee.isCanClose(),
+                employee.getMinEntryTime(),
+                employee.getMaxExitTime(),
+                employee.getInternalNotes());
     }
 }
