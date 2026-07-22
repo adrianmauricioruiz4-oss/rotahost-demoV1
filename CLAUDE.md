@@ -193,7 +193,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T4.2 — Multi-tenant básico por `venueId`: cada cuenta (MANAGER o EMPLOYEE) pertenece a un único
   venue (el de su Employee) y no puede leer ni escribir datos de otro, aunque conozca los IDs
 - [x] T4.3 — Migraciones con Flyway
-- [ ] T4.4 — Deploy (Docker + VPS) + `README.md` público
+- [x] T4.4 — Deploy (Docker + VPS) + `README.md` público
 - [x] T4.5 — Pantalla de login (UI de acceso + "recuperar contraseña"; usa la auth real de T4.1)
 - [ ] T4.6 — Panel principal: pantalla de inicio tras el login con el resumen del venue propio
   (nombre, nº empleados, estado del cuadrante de la semana actual, alertas/conflictos pendientes).
