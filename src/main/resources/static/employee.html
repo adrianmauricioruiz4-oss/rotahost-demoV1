@@ -10,7 +10,11 @@
 <body>
     <header class="app-header">
         <h1>Mi semana</h1>
-        <p class="app-nav"><a href="index.html">← Volver al cuadrante</a></p>
+        <p class="app-nav">
+            <span id="whoami-label"></span>
+            <a href="index.html">← Volver al cuadrante</a>
+            <a href="#" id="logout-link">Cerrar sesión</a>
+        </p>
     </header>
 
     <main>
@@ -18,10 +22,6 @@
 
         <section class="settings-section">
             <form id="lookup-form" class="generate-form">
-                <label>
-                    Employee ID
-                    <input type="number" id="employee-id-input" min="1" value="1" required>
-                </label>
                 <label>
                     Año ISO
                     <input type="number" id="iso-year-input" min="2000" required>

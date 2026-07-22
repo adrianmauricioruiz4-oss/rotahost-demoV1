@@ -41,6 +41,14 @@ public class Employee {
     @Column(nullable = false)
     private boolean active = true;
 
+    /** Hash BCrypt; null hasta que se le asignen credenciales (todavía no hay alta de login vía API). */
+    @Column
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EmployeeRole role = EmployeeRole.EMPLOYEE;
+
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "venue_id", nullable = false)
     private Venue venue;
@@ -106,5 +114,21 @@ public class Employee {
 
     public void setVenue(Venue venue) {
         this.venue = venue;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public EmployeeRole getRole() {
+        return role;
+    }
+
+    public void setRole(EmployeeRole role) {
+        this.role = role;
     }
 }

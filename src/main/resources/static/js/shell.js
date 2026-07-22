@@ -6,19 +6,27 @@
         {
             href: "index.html",
             label: "Cuadrante",
+            managerOnly: true,
             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 13h2M14 13h2M8 17h2M14 17h2"/></svg>'
         },
         {
             href: "employee.html",
             label: "Mi semana",
+            managerOnly: false,
             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h11M4 12h7M4 18h13"/><circle cx="18" cy="6" r="2.3"/><circle cx="14" cy="12" r="2.3"/><circle cx="20" cy="18" r="2.3"/></svg>'
         },
         {
             href: "settings.html",
             label: "Configuración",
+            managerOnly: true,
             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>'
         }
     ];
+
+    function csrfToken() {
+        const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : null;
+    }
 
     function currentPage() {
         const path = window.location.pathname.split("/").pop();
@@ -29,6 +37,7 @@
         const link = document.createElement("a");
         link.className = "nav-item" + (active ? " active" : "");
         link.href = item.href;
+        link.dataset.managerOnly = String(item.managerOnly);
 
         const icon = document.createElement("span");
         icon.innerHTML = item.icon;
@@ -64,8 +73,20 @@
 
         const sideCard = document.createElement("div");
         sideCard.className = "side-card";
+        sideCard.id = "shell-side-card";
         sideCard.innerHTML = "Estás en modo <b>encargado</b>. Nada se publica sin que tú lo revises.";
         target.appendChild(sideCard);
+
+        const logoutLink = document.createElement("a");
+        logoutLink.href = "#";
+        logoutLink.className = "nav-item";
+        logoutLink.textContent = "Cerrar sesión";
+        logoutLink.addEventListener("click", (event) => {
+            event.preventDefault();
+            fetch("/logout", { method: "POST", headers: csrfToken() ? { "X-XSRF-TOKEN": csrfToken() } : {} })
+                .finally(() => { window.location.href = "/"; });
+        });
+        target.appendChild(logoutLink);
     }
 
     /** Las vistas llaman a esto cuando conocen el nombre real del venue. */
@@ -76,10 +97,26 @@
         }
     };
 
+    function applyCurrentUser(me) {
+        const sideCard = document.getElementById("shell-side-card");
+        if (sideCard) {
+            sideCard.innerHTML = me.role === "MANAGER"
+                ? `Hola, <b>${me.name}</b>. Modo encargado: nada se publica sin que tú lo revises.`
+                : `Hola, <b>${me.name}</b>. Modo empleado.`;
+        }
+        if (me.role !== "MANAGER") {
+            document.querySelectorAll('.nav-item[data-manager-only="true"]').forEach((link) => link.remove());
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         const target = document.getElementById("shell-sidebar");
         if (target) {
             render(target);
         }
+        fetch("/api/auth/me")
+            .then((response) => (response.ok ? response.json() : null))
+            .then((me) => { if (me) applyCurrentUser(me); })
+            .catch(() => {});
     });
 })();

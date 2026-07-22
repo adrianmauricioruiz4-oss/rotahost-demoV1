@@ -19,8 +19,22 @@ let currentUncoveredSlots = null;
 let currentEquityReport = null;
 let popTarget = null;
 
+/** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function fetchJson(url, options) {
-    const response = await fetch(url, options);
+    const opts = { ...options };
+    const method = (opts.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+        const token = csrfToken();
+        if (token) {
+            opts.headers = { ...(opts.headers || {}), "X-XSRF-TOKEN": token };
+        }
+    }
+    const response = await fetch(url, opts);
     if (!response.ok) {
         let message = `Error ${response.status} al llamar a ${url}`;
         try {
@@ -705,6 +719,12 @@ function shiftWeek(delta) {
 /* ---------- init ---------- */
 
 document.addEventListener("DOMContentLoaded", () => {
+    fetchJson("/api/auth/me").then((me) => {
+        if (me.role !== "MANAGER") {
+            window.location.href = "employee.html";
+        }
+    }).catch(() => {});
+
     const { isoYear, isoWeek } = currentIsoYearWeek();
     document.getElementById("iso-year-input").value = isoYear;
     document.getElementById("iso-week-input").value = isoWeek;

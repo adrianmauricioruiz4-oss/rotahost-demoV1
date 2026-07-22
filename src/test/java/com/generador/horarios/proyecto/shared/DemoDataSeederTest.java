@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class DemoDataSeederTest {
@@ -39,6 +40,9 @@ class DemoDataSeederTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @Captor
     private ArgumentCaptor<List<CoverageRequirement>> coverageCaptor;
 
@@ -48,11 +52,13 @@ class DemoDataSeederTest {
     @Test
     void seedsVenueShiftTemplatesCoverageAndTenEmployeesWhenEmpty() {
         DemoDataSeeder seeder = new DemoDataSeeder(
-                venueRepository, shiftTemplateRepository, coverageRequirementRepository, employeeRepository);
+                venueRepository, shiftTemplateRepository, coverageRequirementRepository, employeeRepository,
+                passwordEncoder);
 
         when(venueRepository.count()).thenReturn(0L);
         when(venueRepository.save(any(Venue.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(shiftTemplateRepository.save(any(ShiftTemplate.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
 
         seeder.run();
 
@@ -69,7 +75,8 @@ class DemoDataSeederTest {
     @Test
     void doesNothingWhenVenueAlreadyExists() {
         DemoDataSeeder seeder = new DemoDataSeeder(
-                venueRepository, shiftTemplateRepository, coverageRequirementRepository, employeeRepository);
+                venueRepository, shiftTemplateRepository, coverageRequirementRepository, employeeRepository,
+                passwordEncoder);
 
         when(venueRepository.count()).thenReturn(1L);
 

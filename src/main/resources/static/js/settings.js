@@ -1,5 +1,19 @@
+/** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function fetchJson(url, options) {
-    const response = await fetch(url, options);
+    const opts = { ...options };
+    const method = (opts.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+        const token = csrfToken();
+        if (token) {
+            opts.headers = { ...(opts.headers || {}), "X-XSRF-TOKEN": token };
+        }
+    }
+    const response = await fetch(url, opts);
     if (!response.ok) {
         let message = `Error ${response.status} al llamar a ${url}`;
         try {
@@ -135,7 +149,24 @@ async function loadVenueAndShifts(venueId) {
     await loadShiftTemplates(venueId);
 }
 
+function logout() {
+    fetchJson("/logout", { method: "POST" })
+        .catch(() => {})
+        .finally(() => { window.location.href = "/"; });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("logout-link").addEventListener("click", (event) => {
+        event.preventDefault();
+        logout();
+    });
+
+    fetchJson("/api/auth/me").then((me) => {
+        if (me.role !== "MANAGER") {
+            window.location.href = "employee.html";
+        }
+    }).catch(() => {});
+
     document.getElementById("venue-lookup-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const venueId = Number(document.getElementById("venue-id-input").value);

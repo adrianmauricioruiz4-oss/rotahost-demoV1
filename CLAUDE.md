@@ -189,7 +189,7 @@ Marca las casillas al completar. Una tarea, un commit.
 - [x] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
 
 ### Fase 4 — Salir al mercado
-- [ ] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
+- [x] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
 - [ ] T4.2 — Multi-tenant básico por `venueId` (un `MANAGER` puede tener varios `Venue`)
 - [ ] T4.3 — Migraciones con Flyway
 - [ ] T4.4 — Deploy (Docker + VPS) + `README.md` público

@@ -3,6 +3,7 @@ package com.generador.horarios.proyecto.shared;
 import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
 import com.generador.horarios.proyecto.employee.EmployeeRepository;
+import com.generador.horarios.proyecto.employee.EmployeeRole;
 import com.generador.horarios.proyecto.shift.ShiftSegment;
 import com.generador.horarios.proyecto.shift.ShiftTemplate;
 import com.generador.horarios.proyecto.shift.ShiftTemplateRepository;
@@ -14,8 +15,11 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,20 +33,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Profile("!test")
 public class DemoDataSeeder implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
+    private static final String DEMO_PASSWORD = "demo1234";
+
     private final VenueRepository venueRepository;
     private final ShiftTemplateRepository shiftTemplateRepository;
     private final CoverageRequirementRepository coverageRequirementRepository;
     private final EmployeeRepository employeeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(
             VenueRepository venueRepository,
             ShiftTemplateRepository shiftTemplateRepository,
             CoverageRequirementRepository coverageRequirementRepository,
-            EmployeeRepository employeeRepository) {
+            EmployeeRepository employeeRepository,
+            PasswordEncoder passwordEncoder) {
         this.venueRepository = venueRepository;
         this.shiftTemplateRepository = shiftTemplateRepository;
         this.coverageRequirementRepository = coverageRequirementRepository;
         this.employeeRepository = employeeRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -63,7 +73,15 @@ public class DemoDataSeeder implements CommandLineRunner {
                 new ShiftSegment(LocalTime.of(20, 0), LocalTime.MIDNIGHT))));
 
         coverageRequirementRepository.saveAll(buildCoverageRequirements(venue, manana, tarde, partido));
-        employeeRepository.saveAll(buildEmployees(venue));
+
+        List<Employee> employees = buildEmployees(venue);
+        employees.get(0).setRole(EmployeeRole.MANAGER);
+        String encodedPassword = passwordEncoder.encode(DEMO_PASSWORD);
+        employees.forEach(employee -> employee.setPassword(encodedPassword));
+        employeeRepository.saveAll(employees);
+
+        log.info("Datos de demo cargados. Login: {} / {} (encargado); el resto de empleados usa la misma contraseña.",
+                employees.get(0).getEmail(), DEMO_PASSWORD);
     }
 
     /** Refuerzo de plantilla en TARDE/PARTIDO los viernes y sábados. */

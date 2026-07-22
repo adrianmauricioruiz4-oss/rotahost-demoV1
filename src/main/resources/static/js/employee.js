@@ -7,8 +7,22 @@ const DAY_OF_WEEK_LABELS = {
 let currentEmployeeId = null;
 let currentShiftTemplateLabelsById = new Map();
 
+/** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
+function csrfToken() {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function fetchJson(url, options) {
-    const response = await fetch(url, options);
+    const opts = { ...options };
+    const method = (opts.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+        const token = csrfToken();
+        if (token) {
+            opts.headers = { ...(opts.headers || {}), "X-XSRF-TOKEN": token };
+        }
+    }
+    const response = await fetch(url, opts);
     if (!response.ok) {
         let message = `Error ${response.status} al llamar a ${url}`;
         try {
@@ -202,6 +216,41 @@ function updatePreferenceFormVisibility() {
     document.getElementById("pref-weight-field").hidden = type === "UNAVAILABLE";
 }
 
+async function loadMyWeek(isoYear, isoWeek) {
+    setStatusMessage(null);
+    try {
+        const employee = await fetchJson(`/api/employees/${currentEmployeeId}`);
+        const shiftTemplates = await loadShiftTemplatesForVenue(employee.venueId);
+        currentShiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
+        renderShiftSelectOptions(shiftTemplates);
+
+        document.getElementById("preference-fieldset").disabled = false;
+        document.getElementById("preference-hint").hidden = true;
+
+        const days = buildWeekDays(isoYear, isoWeek);
+        try {
+            const schedule = await fetchJson(`/api/schedules?venueId=${employee.venueId}&isoYear=${isoYear}&isoWeek=${isoWeek}`);
+            const assignmentsByDate = new Map(
+                schedule.assignments.filter((a) => a.employeeId === currentEmployeeId).map((a) => [a.date, a.shiftTemplateId])
+            );
+            renderMyWeek(employee, days, assignmentsByDate, schedule.status);
+        } catch (scheduleError) {
+            renderMyWeek(employee, days, new Map(), null);
+            setStatusMessage(`Aún no hay cuadrante generado para esa semana (${scheduleError.message}).`, true);
+        }
+
+        await loadAndRenderPreferences(currentEmployeeId);
+    } catch (error) {
+        setStatusMessage(error.message, true);
+    }
+}
+
+function logout() {
+    fetchJson("/logout", { method: "POST" })
+        .catch(() => {})
+        .finally(() => { window.location.href = "/"; });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const { isoYear, isoWeek } = currentIsoYearWeek();
     document.getElementById("iso-year-input").value = isoYear;
@@ -210,39 +259,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("pref-type-input").addEventListener("change", updatePreferenceFormVisibility);
 
+    document.getElementById("logout-link").addEventListener("click", (event) => {
+        event.preventDefault();
+        logout();
+    });
+
+    fetchJson("/api/auth/me").then((me) => {
+        currentEmployeeId = me.employeeId;
+        document.getElementById("whoami-label").textContent = `${me.name} · ${me.role === "MANAGER" ? "Encargado" : "Empleado"}`;
+        return loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));
+    }).catch((error) => setStatusMessage(error.message, true));
+
     document.getElementById("lookup-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        const employeeId = Number(document.getElementById("employee-id-input").value);
         const isoYear = Number(document.getElementById("iso-year-input").value);
         const isoWeek = Number(document.getElementById("iso-week-input").value);
-
-        setStatusMessage(null);
-        try {
-            const employee = await fetchJson(`/api/employees/${employeeId}`);
-            const shiftTemplates = await loadShiftTemplatesForVenue(employee.venueId);
-            currentShiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
-            renderShiftSelectOptions(shiftTemplates);
-
-            currentEmployeeId = employeeId;
-            document.getElementById("preference-fieldset").disabled = false;
-            document.getElementById("preference-hint").hidden = true;
-
-            const days = buildWeekDays(isoYear, isoWeek);
-            try {
-                const schedule = await fetchJson(`/api/schedules?venueId=${employee.venueId}&isoYear=${isoYear}&isoWeek=${isoWeek}`);
-                const assignmentsByDate = new Map(
-                    schedule.assignments.filter((a) => a.employeeId === employeeId).map((a) => [a.date, a.shiftTemplateId])
-                );
-                renderMyWeek(employee, days, assignmentsByDate, schedule.status);
-            } catch (scheduleError) {
-                renderMyWeek(employee, days, new Map(), null);
-                setStatusMessage(`Aún no hay cuadrante generado para esa semana (${scheduleError.message}).`, true);
-            }
-
-            await loadAndRenderPreferences(employeeId);
-        } catch (error) {
-            setStatusMessage(error.message, true);
-        }
+        await loadMyWeek(isoYear, isoWeek);
     });
 
     document.getElementById("preference-form").addEventListener("submit", async (event) => {
