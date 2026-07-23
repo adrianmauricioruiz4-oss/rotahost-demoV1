@@ -55,17 +55,16 @@ button {
 }
 
 /* ============================================================
-   Movimiento: entrada suave de las pantallas principales, en vez de
-   aparecer de golpe. Discreto a propósito (8px, 280ms) — es una carga
-   de datos, no un efecto llamativo.
+   Movimiento: entrada suave solo en el login (pantalla de una sola vez
+   por sesión). Se quitó de "main"/".content": esas se recargan entero
+   en cada clic del menú lateral (no es una SPA), así que animarlas
+   ahí hacía que cambiar de pestaña se sintiera más lento, no más fino.
    ============================================================ */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.content,
-main,
 .login-card {
     animation: fadeInUp .32s cubic-bezier(.16, 1, .3, 1) both;
 }
@@ -1128,13 +1127,116 @@ main {
 .employee-card-wrapper {
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+    padding: 0;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
 }
 
 .employee-card-wrapper h3 {
     margin: 0 0 0.75rem;
     font-size: 1rem;
+}
+
+/* Tarjetas de empleado colapsadas por defecto: solo nombre + resumen hasta
+   que el encargado pulsa para editar. Con 5 empleados, 5 formularios largos
+   abiertos a la vez era justo lo contrario de "intuitivo". */
+.employee-details summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.employee-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.employee-details summary::after {
+    content: "Editar ▾";
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    transition: transform var(--transition-fast, .15s);
+}
+
+.employee-details[open] summary::after {
+    content: "Cerrar ▾";
+    transform: rotate(180deg);
+}
+
+.employee-details summary:hover {
+    background: var(--paper-soft, rgba(0, 0, 0, 0.02));
+}
+
+.employee-details[open] summary {
+    border-bottom: 1px solid var(--line);
+}
+
+.employee-summary-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.employee-summary-meta {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+}
+
+.employee-inactive-badge {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--line);
+    color: var(--ink-soft);
+    font-size: 0.7rem;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.employee-details form.employee-card {
+    padding: 1rem;
+}
+
+.employee-deactivate-button {
+    margin: 0 1rem 0.85rem;
+}
+
+/* "+ Añadir empleado" plegado por defecto: no ocupa espacio hasta que hace falta. */
+.new-employee-details summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    list-style: none;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-bottom: 0.25rem;
+}
+
+.new-employee-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.plus-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.new-employee-details[open] summary {
+    margin-bottom: 0.75rem;
 }
 
 .employee-card.generate-form fieldset {
