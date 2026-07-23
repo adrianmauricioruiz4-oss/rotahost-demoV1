@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnos · Panel principal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="shell-sidebar"></aside>
+
+        <div class="main">
+            <div class="topbar">
+                <h1 class="dash-title">Panel principal</h1>
+                <div class="spring"></div>
+            </div>
+
+            <main class="dash-main">
+                <p id="status-message" class="status-message" hidden></p>
+
+                <section class="dash-stats" id="dash-stats" hidden>
+                    <div class="dash-card">
+                        <span class="dash-card-label">Local</span>
+                        <span class="dash-card-value" id="dash-venue-name">—</span>
+                    </div>
+                    <div class="dash-card">
+                        <span class="dash-card-label">Empleados activos</span>
+                        <span class="dash-card-value" id="dash-employee-count">—</span>
+                    </div>
+                    <div class="dash-card">
+                        <span class="dash-card-label" id="dash-week-label">Cuadrante de esta semana</span>
+                        <span class="dash-card-value" id="dash-schedule-status">
+                            <span class="badge" id="dash-status-badge"><span class="dot"></span><span id="dash-status-text">—</span></span>
+                        </span>
+                    </div>
+                </section>
+
+                <section class="settings-section" id="dash-alerts-section" hidden>
+                    <h2>Alertas y conflictos pendientes</h2>
+                    <ul class="dash-alerts" id="dash-alerts-list"></ul>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/shell.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
