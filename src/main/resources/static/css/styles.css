@@ -313,7 +313,7 @@ button {
 }
 
 .badge-draft .dot {
-    background: var(--accent);
+    background: var(--draft-dot);
 }
 
 .badge-pub {
@@ -354,11 +354,11 @@ button {
 .btn-primary {
     background: var(--accent);
     color: var(--accent-ink);
-    box-shadow: 0 1px 0 #cf8f2e, var(--shadow);
+    box-shadow: 0 1px 0 #24a35c, var(--shadow);
 }
 
 .btn-primary:hover {
-    background: #EEAD4C;
+    background: var(--accent-hover);
 }
 
 .btn-ghost {
@@ -378,7 +378,33 @@ button {
 }
 
 .btn-teal:hover {
-    background: #0C4448;
+    background: var(--brand-deep);
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 7px 13px 7px 10px;
+    border-radius: var(--r-sm);
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    text-decoration: none;
+    transition: border-color var(--transition-base), color var(--transition-base), background var(--transition-base);
+}
+
+.btn-back svg {
+    width: 15px;
+    height: 15px;
+}
+
+.btn-back:hover {
+    border-color: var(--brand);
+    color: var(--brand);
+    background: var(--brand-tint);
 }
 
 .btn[disabled] {
@@ -908,7 +934,19 @@ table.grid tbody td.cell:first-of-type {
 }
 
 .app-header .app-nav a {
-    color: #93c5fd;
+    color: var(--brand-fg-soft);
+}
+
+.app-header .app-nav .btn-back {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .18);
+    color: var(--brand-fg);
+}
+
+.app-header .app-nav .btn-back:hover {
+    background: rgba(255, 255, 255, .16);
+    border-color: rgba(255, 255, 255, .3);
+    color: #fff;
 }
 
 main {
@@ -1332,4 +1370,65 @@ main {
         size: landscape;
         margin: 12mm;
     }
+}
+
+/* ============================================================
+   Panel principal (T4.6)
+   ============================================================ */
+.dash-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin: 0;
+    padding: 0.9rem 1.25rem;
+}
+
+.dash-main {
+    padding: 1.25rem;
+}
+
+.dash-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.dash-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    padding: 1rem 1.15rem;
+}
+
+.dash-card-label {
+    font-size: var(--fs-sm);
+    color: var(--ink-soft);
+}
+
+.dash-card-value {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.dash-alerts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dash-alerts li {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border-radius: var(--r-sm);
+    padding: 0.6rem 0.85rem;
+    font-size: var(--fs-base);
 }

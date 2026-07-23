@@ -5,7 +5,7 @@
  */
 :root {
     /* ---------- color base ---------- */
-    --paper: #F1F2EE;
+    --paper: #F6F9F7;
     --surface: #FFFFFF;
     --surface-2: #FAFAF7;
     --ink: #17302E;
@@ -13,11 +13,13 @@
     --ink-faint: #8494901a;
     --line: #DFE3DC;
     --line-strong: #C9D0C7;
-    --brand: #0F5257;
-    --brand-deep: #0A3B3F;
-    --brand-tint: #E3EEEC;
-    --accent: #E8A33D;
-    --accent-ink: #4A3308;
+    --brand: #146B45;
+    --brand-deep: #0C4A2F;
+    --brand-tint: #E2F5EA;
+    --accent: #2EBE6C;
+    --accent-ink: #FFFFFF;
+    --accent-hover: #4CD98A;
+    --draft-dot: #D9A227;
     --danger: #C6413A;
     --danger-bg: #FBE6E4;
     --ok: #2F8A5B;
