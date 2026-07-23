@@ -29,7 +29,11 @@ async function fetchJson(url, options) {
     if (response.status === 204) {
         return null;
     }
-    return response.json();
+    const text = await response.text();
+    if (!text) {
+        return null;
+    }
+    return JSON.parse(text);
 }
 
 const POSITION_LABELS = {
@@ -227,13 +231,40 @@ function renderEmployees(employees) {
     });
 }
 
+/** Resumen corto para no obligar a abrir la tarjeta solo para ver quién es quién. */
+function employeeSummaryLine(employee) {
+    const contract = employee.contractType === "PART_TIME"
+        ? `Parcial${employee.contractHours ? ` (${employee.contractHours}h/sem)` : ""}`
+        : "Jornada completa";
+    const positions = employee.positions && employee.positions.length > 0
+        ? employee.positions.map((value) => POSITION_LABELS[value] || value).join(", ")
+        : "Sin puesto asignado";
+    return `${contract} · ${positions}`;
+}
+
 function buildEmployeeCard(employee) {
     const wrapper = document.createElement("div");
     wrapper.className = "employee-card-wrapper";
 
-    const heading = document.createElement("h3");
-    heading.textContent = employee.name + (employee.active ? "" : " (inactivo)");
-    wrapper.appendChild(heading);
+    const details = document.createElement("details");
+    details.className = "employee-details";
+
+    const summary = document.createElement("summary");
+    const summaryName = document.createElement("span");
+    summaryName.className = "employee-summary-name";
+    summaryName.textContent = employee.name;
+    if (!employee.active) {
+        const inactiveBadge = document.createElement("span");
+        inactiveBadge.className = "employee-inactive-badge";
+        inactiveBadge.textContent = "inactivo";
+        summaryName.appendChild(inactiveBadge);
+    }
+    const summaryMeta = document.createElement("span");
+    summaryMeta.className = "employee-summary-meta";
+    summaryMeta.textContent = employeeSummaryLine(employee);
+    summary.appendChild(summaryName);
+    summary.appendChild(summaryMeta);
+    details.appendChild(summary);
 
     const form = buildEmployeeForm(employee, "Guardar", async (body) => {
         try {
@@ -248,12 +279,13 @@ function buildEmployeeCard(employee) {
             setStatusMessage(error.message, true);
         }
     });
-    wrapper.appendChild(form);
+    details.appendChild(form);
+    wrapper.appendChild(details);
 
     if (employee.active) {
         const deactivateButton = document.createElement("button");
         deactivateButton.type = "button";
-        deactivateButton.className = "preference-delete-button";
+        deactivateButton.className = "preference-delete-button employee-deactivate-button";
         deactivateButton.textContent = "Dar de baja";
         deactivateButton.addEventListener("click", async () => {
             if (!window.confirm(`¿Dar de baja a ${employee.name}?`)) {
