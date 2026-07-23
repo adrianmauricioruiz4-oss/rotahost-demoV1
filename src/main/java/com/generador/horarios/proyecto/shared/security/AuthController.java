@@ -22,6 +22,7 @@ public class AuthController {
     public AuthMeResponse me(Authentication authentication) {
         Employee employee = currentUserService.currentEmployee(authentication);
         return new AuthMeResponse(
-                employee.getId(), employee.getName(), employee.getEmail(), employee.getRole(), employee.getVenue().getId());
+                employee.getId(), employee.getName(), employee.getEmail(), employee.getRole(),
+                employee.getVenue().getId(), currentUserService.isGuest(authentication));
     }
 }

@@ -158,11 +158,6 @@ function logout() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("logout-link").addEventListener("click", (event) => {
-        event.preventDefault();
-        logout();
-    });
-
     document.getElementById("venue-edit-form").addEventListener("submit", async (event) => {
         event.preventDefault();
         const body = {

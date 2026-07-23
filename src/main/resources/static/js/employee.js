@@ -4,7 +4,11 @@ const DAY_OF_WEEK_LABELS = {
     FRIDAY: "viernes", SATURDAY: "sábado", SUNDAY: "domingo"
 };
 
-let currentEmployeeId = null;
+let ownEmployeeId = null;
+/** Semana de quién se está viendo: igual a ownEmployeeId salvo que un MANAGER elija a otra persona. */
+let viewedEmployeeId = null;
+let isManagerUser = false;
+let isGuestUser = false;
 let currentShiftTemplateLabelsById = new Map();
 
 /** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
@@ -79,9 +83,9 @@ function buildWeekDays(isoYear, isoWeek) {
     return days;
 }
 
-function currentIsoYearWeek() {
-    const now = new Date();
-    const target = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+/** Semana ISO (año+número) a la que pertenece una fecha cualquiera, para poder navegar semana a semana. */
+function isoYearWeekOfDate(inputDate) {
+    const target = new Date(Date.UTC(inputDate.getUTCFullYear(), inputDate.getUTCMonth(), inputDate.getUTCDate()));
     const dayNumber = (target.getUTCDay() + 6) % 7;
     target.setUTCDate(target.getUTCDate() - dayNumber + 3);
     const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
@@ -89,6 +93,17 @@ function currentIsoYearWeek() {
     firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNumber + 3);
     const isoWeek = 1 + Math.round((target - firstThursday) / (7 * 24 * 60 * 60 * 1000));
     return { isoYear: target.getUTCFullYear(), isoWeek };
+}
+
+function currentIsoYearWeek() {
+    return isoYearWeekOfDate(new Date());
+}
+
+/** delta=-1 semana anterior, delta=1 semana siguiente. */
+function shiftIsoWeek(isoYear, isoWeek, delta) {
+    const monday = mondayOfIsoWeek(isoYear, isoWeek);
+    monday.setUTCDate(monday.getUTCDate() + delta * 7);
+    return isoYearWeekOfDate(monday);
 }
 
 /** "08:00:00" -> "08:00" */
@@ -216,10 +231,84 @@ function updatePreferenceFormVisibility() {
     document.getElementById("pref-weight-field").hidden = type === "UNAVAILABLE";
 }
 
+/**
+ * Ver tu propia semana: además de fichar, puedes editar tus preferencias.
+ * Ver la semana de otra persona (solo MANAGER): cuadrante en solo lectura, sin fichar ni
+ * preferencias — no tiene sentido ficharle a otro ni tocar sus preferencias desde aquí.
+ */
+function updateSectionVisibilityForViewedEmployee() {
+    const viewingSelf = viewedEmployeeId === ownEmployeeId;
+    document.getElementById("timeclock-section").hidden = !viewingSelf;
+    document.getElementById("preferences-section").hidden = !viewingSelf || isGuestUser;
+}
+
+async function loadTimeClockStatus() {
+    const button = document.getElementById("timeclock-button");
+    const status = document.getElementById("timeclock-status");
+    try {
+        const data = await fetchJson("/api/timeclock/status");
+        applyTimeClockStatus(data, button, status);
+    } catch (error) {
+        status.textContent = "No se pudo cargar el estado de fichaje.";
+    }
+}
+
+function applyTimeClockStatus(data, button, status) {
+    const isClockIn = data.nextAction === "CLOCK_IN";
+    button.textContent = isClockIn ? "Fichar entrada" : "Fichar salida";
+    button.className = isClockIn ? "btn btn-primary" : "btn btn-teal";
+    if (data.lastEntry) {
+        const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
+            weekday: "short", hour: "2-digit", minute: "2-digit"
+        });
+        const lastLabel = data.lastEntry.type === "CLOCK_IN" ? "Entrada" : "Salida";
+        status.textContent = `Último fichaje: ${lastLabel} · ${time}`;
+    } else {
+        status.textContent = "Todavía no has fichado ninguna vez.";
+    }
+}
+
+async function punch() {
+    const button = document.getElementById("timeclock-button");
+    const status = document.getElementById("timeclock-status");
+    button.disabled = true;
+    try {
+        await fetchJson("/api/timeclock/punch", { method: "POST" });
+        await loadTimeClockStatus();
+    } catch (error) {
+        status.textContent = error.message;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function populateEmployeeSelect() {
+    const field = document.getElementById("employee-select-field");
+    if (!isManagerUser) {
+        field.hidden = true;
+        return;
+    }
+    try {
+        const employees = await fetchJson("/api/employees");
+        const select = document.getElementById("employee-select");
+        select.innerHTML = "";
+        employees.filter((e) => e.active).forEach((employee) => {
+            const option = document.createElement("option");
+            option.value = String(employee.id);
+            option.textContent = employee.id === ownEmployeeId ? `${employee.name} (tú)` : employee.name;
+            select.appendChild(option);
+        });
+        select.value = String(ownEmployeeId);
+        field.hidden = false;
+    } catch (error) {
+        field.hidden = true;
+    }
+}
+
 async function loadMyWeek(isoYear, isoWeek) {
     setStatusMessage(null);
     try {
-        const employee = await fetchJson(`/api/employees/${currentEmployeeId}`);
+        const employee = await fetchJson(`/api/employees/${viewedEmployeeId}`);
         const shiftTemplates = await loadShiftTemplatesForVenue(employee.venueId);
         currentShiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
         renderShiftSelectOptions(shiftTemplates);
@@ -231,7 +320,7 @@ async function loadMyWeek(isoYear, isoWeek) {
         try {
             const schedule = await fetchJson(`/api/schedules?venueId=${employee.venueId}&isoYear=${isoYear}&isoWeek=${isoWeek}`);
             const assignmentsByDate = new Map(
-                schedule.assignments.filter((a) => a.employeeId === currentEmployeeId).map((a) => [a.date, a.shiftTemplateId])
+                schedule.assignments.filter((a) => a.employeeId === viewedEmployeeId).map((a) => [a.date, a.shiftTemplateId])
             );
             renderMyWeek(employee, days, assignmentsByDate, schedule.status);
         } catch (scheduleError) {
@@ -239,16 +328,16 @@ async function loadMyWeek(isoYear, isoWeek) {
             setStatusMessage(`Aún no hay cuadrante generado para esa semana (${scheduleError.message}).`, true);
         }
 
-        await loadAndRenderPreferences(currentEmployeeId);
+        updateSectionVisibilityForViewedEmployee();
+        if (viewedEmployeeId === ownEmployeeId && !isGuestUser) {
+            await loadAndRenderPreferences(ownEmployeeId);
+        }
+        if (viewedEmployeeId === ownEmployeeId) {
+            await loadTimeClockStatus();
+        }
     } catch (error) {
         setStatusMessage(error.message, true);
     }
-}
-
-function logout() {
-    fetchJson("/logout", { method: "POST" })
-        .catch(() => {})
-        .finally(() => { window.location.href = "/"; });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -259,14 +348,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("pref-type-input").addEventListener("change", updatePreferenceFormVisibility);
 
-    document.getElementById("logout-link").addEventListener("click", (event) => {
-        event.preventDefault();
-        logout();
+    document.getElementById("wk-prev").addEventListener("click", () => {
+        const current = shiftIsoWeek(
+            Number(document.getElementById("iso-year-input").value),
+            Number(document.getElementById("iso-week-input").value), -1);
+        document.getElementById("iso-year-input").value = current.isoYear;
+        document.getElementById("iso-week-input").value = current.isoWeek;
+        loadMyWeek(current.isoYear, current.isoWeek);
     });
 
-    fetchJson("/api/auth/me").then((me) => {
-        currentEmployeeId = me.employeeId;
-        document.getElementById("whoami-label").textContent = `${me.name} · ${me.role === "MANAGER" ? "Encargado" : "Empleado"}`;
+    document.getElementById("wk-next").addEventListener("click", () => {
+        const current = shiftIsoWeek(
+            Number(document.getElementById("iso-year-input").value),
+            Number(document.getElementById("iso-week-input").value), 1);
+        document.getElementById("iso-year-input").value = current.isoYear;
+        document.getElementById("iso-week-input").value = current.isoWeek;
+        loadMyWeek(current.isoYear, current.isoWeek);
+    });
+
+    document.getElementById("timeclock-button").addEventListener("click", punch);
+
+    document.getElementById("employee-select").addEventListener("change", (event) => {
+        viewedEmployeeId = Number(event.target.value);
+        loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));
+    });
+
+    fetchJson("/api/auth/me").then(async (me) => {
+        ownEmployeeId = me.employeeId;
+        viewedEmployeeId = me.employeeId;
+        isManagerUser = me.role === "MANAGER";
+        isGuestUser = !!me.guest;
+        const roleLabel = isGuestUser ? "Invitado" : (me.role === "MANAGER" ? "Encargado" : "Empleado");
+        document.getElementById("whoami-label").textContent = `${me.name} · ${roleLabel}`;
+
+        // Un empleado o invitado nunca llega al cuadrante (index.html les rebota de vuelta aquí
+        // porque no son MANAGER), así que "Volver al cuadrante" no tiene sentido para ellos: el
+        // único sitio donde pueden cerrar sesión es este botón.
+        if (!isManagerUser) {
+            const link = document.getElementById("back-or-logout-link");
+            document.getElementById("back-or-logout-label").textContent = "Cerrar sesión";
+            link.removeAttribute("href");
+            link.style.cursor = "pointer";
+            link.setAttribute("role", "button");
+            link.setAttribute("tabindex", "0");
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                fetchJson("/logout", { method: "POST" })
+                    .catch(() => {})
+                    .finally(() => { window.location.href = "/"; });
+            });
+            link.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    link.click();
+                }
+            });
+        }
+
+        await populateEmployeeSelect();
         return loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));
     }).catch((error) => setStatusMessage(error.message, true));
 
@@ -279,7 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("preference-form").addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (!currentEmployeeId) {
+        if (!ownEmployeeId) {
             setStatusMessage("Consulta tu semana primero.", true);
             return;
         }
@@ -290,7 +429,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const isUnavailable = type === "UNAVAILABLE";
 
         const body = {
-            employeeId: currentEmployeeId,
+            employeeId: ownEmployeeId,
             type,
             dayOfWeek: isDayType ? document.getElementById("pref-day-input").value : null,
             shiftTemplateId: isShiftType ? Number(document.getElementById("pref-shift-input").value) : null,
@@ -305,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(body)
             });
             setStatusMessage("Preferencia añadida.", false);
-            await loadAndRenderPreferences(currentEmployeeId);
+            await loadAndRenderPreferences(ownEmployeeId);
         } catch (error) {
             setStatusMessage(error.message, true);
         }

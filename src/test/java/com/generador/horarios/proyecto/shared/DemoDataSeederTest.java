@@ -77,7 +77,7 @@ class DemoDataSeederTest {
     }
 
     @Test
-    void seedsVenueShiftTemplatesCoverageAndTenEmployeesWhenEmpty() {
+    void seedsVenueShiftTemplatesCoverageAndFiveEmployeesWhenEmpty() {
         DemoDataSeeder seeder = newSeeder();
 
         when(venueRepository.count()).thenReturn(0L);
@@ -99,7 +99,7 @@ class DemoDataSeederTest {
         Assertions.assertThat(coverageCaptor.getValue()).hasSize(21);
 
         verify(employeeRepository).saveAll(employeeCaptor.capture());
-        Assertions.assertThat(employeeCaptor.getValue()).hasSize(10);
+        Assertions.assertThat(employeeCaptor.getValue()).hasSize(5);
 
         verify(scheduleRepository).save(any(Schedule.class));
         verify(shiftAssignmentRepository).saveAll(anyList());

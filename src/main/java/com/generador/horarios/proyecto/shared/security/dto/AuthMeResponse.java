@@ -7,6 +7,7 @@ public record AuthMeResponse(
         String name,
         String email,
         EmployeeRole role,
-        Long venueId
+        Long venueId,
+        boolean guest
 ) {
 }

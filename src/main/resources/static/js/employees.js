@@ -280,11 +280,6 @@ function logout() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("logout-link").addEventListener("click", (event) => {
-        event.preventDefault();
-        logout();
-    });
-
     const newEmployeeForm = buildEmployeeForm(null, "Añadir empleado", async (body) => {
         try {
             await fetchJson("/api/employees", {

@@ -28,6 +28,12 @@ public class CurrentUserService {
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + EmployeeRole.MANAGER.name()));
     }
 
+    /** Un invitado (ver GuestAuthController) tiene ROLE_GUEST, no ROLE_EMPLOYEE/ROLE_MANAGER. */
+    public boolean isGuest(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_GUEST"));
+    }
+
     /** Cada cuenta pertenece a un único venue (el de su Employee); no hay cuentas multi-venue. */
     public Long currentVenueId(Authentication authentication) {
         return currentEmployee(authentication).getVenue().getId();

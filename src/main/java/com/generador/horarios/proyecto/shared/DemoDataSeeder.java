@@ -34,9 +34,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Siembra un bar de demo con turnos, cobertura, 10 empleados y un cuadrante ya generado
- * para la semana ISO actual, para poder ver la app poblada (panel, cuadrante) nada más
- * arrancar, sin pasos manuales. No se ejecuta en el perfil "test" y es idempotente (solo
+ * Siembra un restaurante de demo con turnos, cobertura, 5 empleados y un cuadrante ya
+ * generado para la semana ISO actual, para poder ver la app poblada (panel, cuadrante) nada
+ * más arrancar, sin pasos manuales. No se ejecuta en el perfil "test" y es idempotente (solo
  * siembra si la base de datos está vacía).
  */
 @Component
@@ -84,7 +84,7 @@ public class DemoDataSeeder implements CommandLineRunner {
             return;
         }
 
-        Venue venue = venueRepository.save(new Venue("Bar La Esquina", LocalTime.of(8, 0), LocalTime.of(2, 0)));
+        Venue venue = venueRepository.save(new Venue("Restaurante", LocalTime.of(8, 0), LocalTime.of(2, 0)));
 
         ShiftTemplate manana = shiftTemplateRepository.save(new ShiftTemplate("MAÑANA", venue,
                 List.of(new ShiftSegment(LocalTime.of(8, 0), LocalTime.of(16, 0)))));
@@ -143,34 +143,30 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Refuerzo de plantilla en TARDE los viernes y sábados. PARTIDO se queda siempre en 1
-     * persona (es el turno menos cómodo, no tiene sentido pedir varias) para que la
-     * plantilla total del día sea realista en un bar pequeño: 5 personas entre semana,
-     * 6 en el pico de viernes/sábado.
+     * Plantilla de un equipo pequeño (5 personas): entre semana basta con 1 persona por
+     * turno (3 al día); el refuerzo de TARDE/MAÑANA los viernes y sábados sube el pico a
+     * 5, casi todo el equipo, pero deja margen para que alguien libre ese día. PARTIDO se
+     * queda siempre en 1 (es el turno menos cómodo, no tiene sentido pedir varias).
      */
     private List<CoverageRequirement> buildCoverageRequirements(
             Venue venue, ShiftTemplate manana, ShiftTemplate tarde, ShiftTemplate partido) {
         List<CoverageRequirement> requirements = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
             boolean isWeekendPeak = day == DayOfWeek.FRIDAY || day == DayOfWeek.SATURDAY;
-            requirements.add(new CoverageRequirement(venue, day, manana, 2));
-            requirements.add(new CoverageRequirement(venue, day, tarde, isWeekendPeak ? 3 : 2));
+            requirements.add(new CoverageRequirement(venue, day, manana, isWeekendPeak ? 2 : 1));
+            requirements.add(new CoverageRequirement(venue, day, tarde, isWeekendPeak ? 2 : 1));
             requirements.add(new CoverageRequirement(venue, day, partido, 1));
         }
         return requirements;
     }
 
+    /** Equipo reducido a 5 personas (encargada incluida): más realista para un local pequeño. */
     private List<Employee> buildEmployees(Venue venue) {
         return List.of(
                 new Employee("Ana García", "ana.garcia@barlaesquina.com", ContractType.FULL_TIME, null, venue),
                 new Employee("Javier Martínez", "javier.martinez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
                 new Employee("Laura Fernández", "laura.fernandez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("Carlos Rodríguez", "carlos.rodriguez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("María López", "maria.lopez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("David Sánchez", "david.sanchez@barlaesquina.com", ContractType.PART_TIME, 20, venue),
-                new Employee("Sara Pérez", "sara.perez@barlaesquina.com", ContractType.PART_TIME, 25, venue),
-                new Employee("Pablo Gómez", "pablo.gomez@barlaesquina.com", ContractType.PART_TIME, 30, venue),
-                new Employee("Lucía Díaz", "lucia.diaz@barlaesquina.com", ContractType.PART_TIME, 20, venue),
-                new Employee("Miguel Ruiz", "miguel.ruiz@barlaesquina.com", ContractType.PART_TIME, 25, venue));
+                new Employee("Carlos Rodríguez", "carlos.rodriguez@barlaesquina.com", ContractType.PART_TIME, 25, venue),
+                new Employee("María López", "maria.lopez@barlaesquina.com", ContractType.PART_TIME, 25, venue));
     }
 }

@@ -34,6 +34,19 @@
         </form>
 
         <a href="#" id="forgot-password-link" class="login-forgot">¿Olvidaste tu contraseña?</a>
+
+        <div class="login-divider"><span>o</span></div>
+
+        <div id="guest-form" class="login-form">
+            <label>
+                Tu nombre
+                <select id="guest-select">
+                    <option value="">Selecciona tu nombre…</option>
+                </select>
+            </label>
+            <button type="button" id="guest-submit" class="btn btn-ghost login-submit">Entrar como invitado</button>
+            <p class="login-guest-hint">Solo para ver tu horario y fichar. No podrás editar nada.</p>
+        </div>
     </div>
 
     <script src="js/toast.js"></script>

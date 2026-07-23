@@ -437,7 +437,6 @@ async function applyAssignment(shiftTemplateId) {
         });
         setAssignmentState(employeeId, date, shiftTemplateId);
         renderGrid();
-        renderPanels();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
         showToast(hasWarnings ? result.softWarnings[0] : "Turno actualizado", hasWarnings ? "warn" : undefined);
     } catch (error) {
@@ -603,10 +602,8 @@ async function applyState(data) {
     unavailableSet = await loadUnavailableSet(data.employees.map((e) => e.id), weekDateSet);
 
     renderWeekLabel();
-    renderLegend();
     renderHead();
     renderGrid();
-    renderPanels();
     showBoard();
 
     fetchJson(`/api/venues/${data.venueId}`)

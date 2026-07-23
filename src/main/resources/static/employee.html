@@ -12,8 +12,7 @@
         <h1>Mi semana</h1>
         <p class="app-nav">
             <span id="whoami-label"></span>
-            <a href="index.html" class="btn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver al cuadrante</a>
-            <a href="#" id="logout-link">Cerrar sesión</a>
+            <a href="index.html" class="btn-back" id="back-or-logout-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="back-or-logout-label">Volver al cuadrante</span></a>
         </p>
     </header>
 
@@ -22,15 +21,27 @@
 
         <section class="settings-section">
             <form id="lookup-form" class="generate-form">
-                <label>
-                    Año ISO
-                    <input type="number" id="iso-year-input" min="2000" required>
+                <label id="employee-select-field" hidden>
+                    Ver semana de
+                    <select id="employee-select"></select>
                 </label>
-                <label>
-                    Semana ISO
-                    <input type="number" id="iso-week-input" min="1" max="53" required>
-                </label>
-                <button type="submit">Ver mi semana</button>
+                <div class="week-nav-inline">
+                    <button type="button" class="wk-btn" id="wk-prev" aria-label="Semana anterior">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                    </button>
+                    <label>
+                        Año ISO
+                        <input type="number" id="iso-year-input" min="2000" required>
+                    </label>
+                    <label>
+                        Semana ISO
+                        <input type="number" id="iso-week-input" min="1" max="53" required>
+                    </label>
+                    <button type="button" class="wk-btn" id="wk-next" aria-label="Semana siguiente">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+                    </button>
+                </div>
+                <button type="submit">Ver semana</button>
             </form>
         </section>
 
@@ -48,7 +59,13 @@
             </div>
         </section>
 
-        <section class="settings-section">
+        <section class="settings-section" id="timeclock-section" hidden>
+            <h2>Fichar</h2>
+            <p id="timeclock-status" class="status-message"></p>
+            <button type="button" id="timeclock-button" class="btn btn-primary"></button>
+        </section>
+
+        <section class="settings-section" id="preferences-section">
             <h2>Mis preferencias</h2>
             <ul id="preferences-list" class="preferences-list"></ul>
 

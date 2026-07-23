@@ -13,6 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.context.DelegatingSecurityContextRepository;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
@@ -35,11 +39,28 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Compartido entre el filtro de seguridad y GuestAuthController, que la usa para persistir a
+     * mano la Authentication del invitado (no pasa por el filtro de formLogin). Reconstruye a
+     * propósito la combinación que Spring Security usa por defecto cuando no se personaliza
+     * securityContext() (RequestAttribute + HttpSession) en vez de solo HttpSession: usar solo
+     * HttpSession aquí rompía SecurityAuthorizationTest (un EMPLOYEE colaba una request como si
+     * fuera el MANAGER autenticado justo antes en la misma suite, vía TestRestTemplate compartido).
+     */
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new DelegatingSecurityContextRepository(
+                new RequestAttributeSecurityContextRepository(), new HttpSessionSecurityContextRepository());
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityContext(securityContext -> securityContext.securityContextRepository(securityContextRepository()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login.html", "/css/**", "/js/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/guest-roster").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/guest-login").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**")
                         .hasRole("MANAGER")
@@ -52,8 +73,13 @@ public class SecurityConfig {
                         .hasRole("MANAGER")
                         .requestMatchers(HttpMethod.POST, "/api/schedules/generate", "/api/schedules/*/publish")
                         .hasRole("MANAGER")
+                        // Un invitado (ROLE_GUEST) no es ni EMPLOYEE ni MANAGER: puede ver su semana y
+                        // fichar, pero no crear/borrar preferencias en nombre de nadie.
+                        .requestMatchers(HttpMethod.POST, "/api/preferences/**").hasAnyRole("EMPLOYEE", "MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/preferences/**").hasAnyRole("EMPLOYEE", "MANAGER")
                         .anyRequest().authenticated())
-                .formLogin(form -> form.loginPage("/login.html").loginProcessingUrl("/login").permitAll())
+                .formLogin(form -> form.loginPage("/login.html").loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/dashboard.html").permitAll())
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exceptions -> exceptions
                         .defaultAuthenticationEntryPointFor(
