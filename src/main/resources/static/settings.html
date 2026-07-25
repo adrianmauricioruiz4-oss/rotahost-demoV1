@@ -4,63 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turnos — Configuración</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>Configuración</h1>
-        <p class="app-nav">
-            <a href="index.html" class="btn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver al cuadrante</a>
-        </p>
-    </header>
+    <div class="app">
+        <aside class="sidebar" id="shell-sidebar"></aside>
 
-    <main>
-        <p id="status-message" class="status-message" hidden></p>
+        <div class="main">
+            <div class="topbar">
+                <h1 class="dash-title">Configuración</h1>
+                <div class="spring"></div>
+            </div>
 
-        <section class="settings-section">
-            <h2>General</h2>
-            <form class="generate-form">
-                <label>
-                    Idioma
-                    <select id="language-select">
-                        <option value="es">Español</option>
-                        <option value="en" disabled>English (próximamente)</option>
-                    </select>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="notifications-toggle" checked>
-                    Avisarme cuando haya huecos de cobertura sin cubrir
-                </label>
-            </form>
-        </section>
+            <main class="dash-main">
+                <p id="status-message" class="status-message" hidden></p>
 
-        <section class="settings-section">
-            <h2>Local</h2>
-            <form id="venue-edit-form" class="generate-form" hidden>
-                <label>
-                    Nombre
-                    <input type="text" id="venue-name-input" required>
-                </label>
-                <label>
-                    Apertura
-                    <input type="time" id="venue-opening-input" required>
-                </label>
-                <label>
-                    Cierre
-                    <input type="time" id="venue-closing-input" required>
-                </label>
-                <button type="submit">Guardar horario del local</button>
-            </form>
-        </section>
+                <section class="settings-section">
+                    <h2>General</h2>
+                    <form class="generate-form">
+                        <label>
+                            Idioma
+                            <select id="language-select">
+                                <option value="es">Español</option>
+                                <option value="en" disabled>English (próximamente)</option>
+                            </select>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="notifications-toggle" checked>
+                            Avisarme cuando haya huecos de cobertura sin cubrir
+                        </label>
+                    </form>
+                </section>
 
-        <section class="settings-section">
-            <h2>Turnos</h2>
-            <p id="shift-templates-empty" hidden>Carga primero un venue para ver sus turnos.</p>
-            <div id="shift-templates-list"></div>
-        </section>
-    </main>
+                <section class="settings-section">
+                    <h2>Local</h2>
+                    <form id="venue-edit-form" class="generate-form" hidden>
+                        <label>
+                            Nombre
+                            <input type="text" id="venue-name-input" required>
+                        </label>
+                        <label>
+                            Apertura
+                            <input type="time" id="venue-opening-input" required>
+                        </label>
+                        <label>
+                            Cierre
+                            <input type="time" id="venue-closing-input" required>
+                        </label>
+                        <button type="submit">Guardar horario del local</button>
+                    </form>
+                </section>
 
+                <section class="settings-section">
+                    <h2>Turnos</h2>
+                    <p id="shift-templates-empty" hidden>Carga primero un venue para ver sus turnos.</p>
+                    <div id="shift-templates-list"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/shell.js"></script>
     <script src="js/settings.js"></script>
 </body>
 </html>

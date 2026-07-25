@@ -382,32 +382,9 @@ document.addEventListener("DOMContentLoaded", () => {
         viewedEmployeeId = me.employeeId;
         isManagerUser = me.role === "MANAGER";
         isGuestUser = !!me.guest;
-        const roleLabel = isGuestUser ? "Invitado" : (me.role === "MANAGER" ? "Encargado" : "Empleado");
-        document.getElementById("whoami-label").textContent = `${me.name} · ${roleLabel}`;
 
-        // Un empleado o invitado nunca llega al cuadrante (index.html les rebota de vuelta aquí
-        // porque no son MANAGER), así que "Volver al cuadrante" no tiene sentido para ellos: el
-        // único sitio donde pueden cerrar sesión es este botón.
-        if (!isManagerUser) {
-            const link = document.getElementById("back-or-logout-link");
-            document.getElementById("back-or-logout-label").textContent = "Cerrar sesión";
-            link.removeAttribute("href");
-            link.style.cursor = "pointer";
-            link.setAttribute("role", "button");
-            link.setAttribute("tabindex", "0");
-            link.addEventListener("click", (event) => {
-                event.preventDefault();
-                fetchJson("/logout", { method: "POST" })
-                    .catch(() => {})
-                    .finally(() => { window.location.href = "/"; });
-            });
-            link.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    link.click();
-                }
-            });
-        }
+        // La identidad, la navegación según rol y el "Cerrar sesión" los pinta el sidebar
+        // compartido (shell.js), igual que en el resto de vistas.
 
         await populateEmployeeSelect();
         return loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));

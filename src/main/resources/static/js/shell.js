@@ -71,7 +71,7 @@
         brand.className = "brand";
         brand.innerHTML =
             '<div class="logo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 2v3M16 2v3M3 9h18"/><rect x="3" y="5" width="18" height="17" rx="3"/></svg></div>' +
-            '<div><span class="brandmark">Turnos</span><small id="shell-venue-name">Selecciona un venue</small></div>';
+            '<div><span class="brandmark">Turnos</span><small id="shell-venue-name">Cargando…</small></div>';
         target.appendChild(brand);
 
         const nav = document.createElement("nav");
@@ -109,16 +109,45 @@
         }
     };
 
+    /**
+     * Pinta el saludo y recorta la navegación según el rol.
+     * El nombre se inserta con textContent, nunca con innerHTML: lo escribe el encargado
+     * al dar de alta al empleado, así que es texto ajeno y no debe interpretarse como HTML.
+     */
     function applyCurrentUser(me) {
         const sideCard = document.getElementById("shell-side-card");
         if (sideCard) {
-            sideCard.innerHTML = me.role === "MANAGER"
-                ? `Hola, <b>${me.name}</b>. Modo encargado: nada se publica sin que tú lo revises.`
-                : `Hola, <b>${me.name}</b>. Modo empleado.`;
+            const isManager = me.role === "MANAGER";
+            const tail = me.guest
+                ? ". Modo invitado: puedes mirar, no tocar."
+                : (isManager
+                    ? ". Modo encargado: nada se publica sin que tú lo revises."
+                    : ". Modo empleado.");
+
+            sideCard.textContent = "Hola, ";
+            const name = document.createElement("b");
+            name.textContent = me.name;
+            sideCard.appendChild(name);
+            sideCard.appendChild(document.createTextNode(tail));
         }
         if (me.role !== "MANAGER") {
             document.querySelectorAll('.nav-item[data-manager-only="true"]').forEach((link) => link.remove());
         }
+    }
+
+    /**
+     * Resuelve el nombre del local a partir del venueId de la sesión. Lo hace el shell
+     * para que todas las vistas lo muestren, no solo las que ya cargaban el venue por
+     * su cuenta (panel y cuadrante): si no, el sidebar se queda en el texto de relleno.
+     */
+    function loadVenueName(me) {
+        if (!me.venueId) {
+            return;
+        }
+        fetch(`/api/venues/${me.venueId}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((venue) => { if (venue && venue.name) window.updateShellVenueName(venue.name); })
+            .catch(() => {});
     }
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -128,7 +157,11 @@
         }
         fetch("/api/auth/me")
             .then((response) => (response.ok ? response.json() : null))
-            .then((me) => { if (me) applyCurrentUser(me); })
+            .then((me) => {
+                if (!me) return;
+                applyCurrentUser(me);
+                loadVenueName(me);
+            })
             .catch(() => {});
     });
 })();

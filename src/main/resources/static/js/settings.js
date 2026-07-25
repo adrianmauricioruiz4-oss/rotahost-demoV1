@@ -155,12 +155,6 @@ async function loadVenueAndShifts(venueId) {
     await loadShiftTemplates(venueId);
 }
 
-function logout() {
-    fetchJson("/logout", { method: "POST" })
-        .catch(() => {})
-        .finally(() => { window.location.href = "/"; });
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("venue-edit-form").addEventListener("submit", async (event) => {
         event.preventDefault();

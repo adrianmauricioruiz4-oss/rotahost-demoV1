@@ -305,12 +305,6 @@ function buildEmployeeCard(employee) {
     return wrapper;
 }
 
-function logout() {
-    fetchJson("/logout", { method: "POST" })
-        .catch(() => {})
-        .finally(() => { window.location.href = "/"; });
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const newEmployeeForm = buildEmployeeForm(null, "Añadir empleado", async (body) => {
         try {

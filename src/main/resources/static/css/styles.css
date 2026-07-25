@@ -117,7 +117,7 @@ button {
 .brand .brandmark {
     font-weight: 800;
     font-size: var(--fs-lg);
-    color: #fff;
+    color: var(--brand-fg-strong);
     letter-spacing: -.02em;
     display: block;
 }
@@ -162,13 +162,13 @@ button {
 }
 
 .nav-item:hover {
-    background: #0E4A4E;
+    background: var(--sidebar-hover);
     color: var(--brand-fg);
 }
 
 .nav-item.active {
     background: var(--brand);
-    color: #fff;
+    color: var(--brand-fg-strong);
 }
 
 .nav-item.active svg {
@@ -180,12 +180,12 @@ button {
 }
 
 .side-card {
-    background: #0E4A4E;
-    border: 1px solid #16565A;
+    background: var(--sidebar-hover);
+    border: 1px solid var(--sidebar-line);
     border-radius: 12px;
     padding: var(--space-5);
     font-size: var(--fs-xs);
-    color: #9FC4C2;
+    color: var(--sidebar-ink-soft);
     line-height: 1.5;
 }
 
@@ -207,7 +207,7 @@ button {
     position: sticky;
     top: 0;
     z-index: var(--z-topbar);
-    background: rgba(241, 242, 238, .82);
+    background: var(--topbar-veil);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
     padding: var(--space-6) var(--space-10);
@@ -338,9 +338,9 @@ button {
 }
 
 .badge-draft {
-    background: #FBF1DC;
-    color: #8A6410;
-    border-color: #EDD9A6;
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    border-color: var(--warn-line);
 }
 
 .badge-draft .dot {
@@ -349,8 +349,8 @@ button {
 
 .badge-pub {
     background: var(--ok-bg);
-    color: #1E6B44;
-    border-color: #BDE3CC;
+    color: var(--ok-ink);
+    border-color: var(--ok-line);
 }
 
 .badge-pub .dot {
@@ -385,7 +385,7 @@ button {
 .btn-primary {
     background: var(--accent);
     color: var(--accent-ink);
-    box-shadow: 0 1px 0 #24a35c, var(--shadow);
+    box-shadow: 0 1px 0 var(--accent-shade), var(--shadow);
 }
 
 .btn-primary:hover {
@@ -405,37 +405,11 @@ button {
 
 .btn-teal {
     background: var(--brand);
-    color: #fff;
+    color: var(--accent-ink);
 }
 
 .btn-teal:hover {
     background: var(--brand-deep);
-}
-
-.btn-back {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: 7px 13px 7px 10px;
-    border-radius: var(--r-sm);
-    font-weight: 600;
-    font-size: var(--fs-sm);
-    color: var(--ink-soft);
-    background: var(--surface);
-    border: 1px solid var(--line-strong);
-    text-decoration: none;
-    transition: border-color var(--transition-base), color var(--transition-base), background var(--transition-base);
-}
-
-.btn-back svg {
-    width: 15px;
-    height: 15px;
-}
-
-.btn-back:hover {
-    border-color: var(--brand);
-    color: var(--brand);
-    background: var(--brand-tint);
 }
 
 .btn[disabled] {
@@ -589,7 +563,7 @@ td.name-col {
     place-items: center;
     font-size: var(--fs-xs);
     font-weight: 700;
-    color: #fff;
+    color: var(--accent-ink);
 }
 
 .emp .nm {
@@ -637,7 +611,7 @@ table.grid tbody td.cell:first-of-type {
 
 .chip:hover {
     filter: brightness(.97);
-    box-shadow: 0 2px 6px rgba(20, 40, 38, .12);
+    box-shadow: var(--shadow-sm);
 }
 
 .chip.m { background: var(--m-bg); border-color: var(--m-line); color: var(--m-ink); }
@@ -647,9 +621,9 @@ table.grid tbody td.cell:first-of-type {
 .chip.l { background: var(--l-bg); border-color: var(--l-line); color: var(--l-ink); font-weight: 500; }
 
 .chip.na {
-    background: repeating-linear-gradient(-45deg, #EEF0EC, #EEF0EC 5px, #E6E9E4 5px, #E6E9E4 10px);
+    background: repeating-linear-gradient(-45deg, var(--hatch-a), var(--hatch-a) 5px, var(--hatch-b) 5px, var(--hatch-b) 10px);
     border-color: var(--line-strong);
-    color: #96A09A;
+    color: var(--ink-muted);
     cursor: not-allowed;
     font-weight: 500;
 }
@@ -716,8 +690,8 @@ table.grid tbody td.cell:first-of-type {
     border-radius: 999px;
 }
 
-.pill-warn { background: #FBF1DC; color: #8A6410; }
-.pill-ok { background: var(--ok-bg); color: #1E6B44; }
+.pill-warn { background: var(--warn-bg); color: var(--warn-ink); }
+.pill-ok { background: var(--ok-bg); color: var(--ok-ink); }
 
 .gap-row {
     display: flex;
@@ -768,7 +742,7 @@ table.grid tbody td.cell:first-of-type {
 .eq-bar {
     height: 8px;
     border-radius: 6px;
-    background: #EDEFEA;
+    background: var(--sunken);
     overflow: hidden;
 }
 
@@ -776,7 +750,7 @@ table.grid tbody td.cell:first-of-type {
     display: block;
     height: 100%;
     border-radius: 6px;
-    background: linear-gradient(90deg, var(--brand), #2C8188);
+    background: linear-gradient(90deg, var(--brand), var(--brand-alt));
 }
 
 .eq-row .val {
@@ -887,7 +861,7 @@ table.grid tbody td.cell:first-of-type {
 .sq.t { background: var(--t-bg); border-color: var(--t-line); }
 .sq.p { background: var(--p-bg); border-color: var(--p-line); }
 .sq.n { background: var(--n-bg); border-color: var(--n-line); }
-.sq.x { background: #F3F4F1; border-color: var(--line-strong); }
+.sq.x { background: var(--sunken-2); border-color: var(--line-strong); }
 
 /* ============================================================
    Toasts
@@ -921,7 +895,7 @@ table.grid tbody td.cell:first-of-type {
 }
 
 .toast.warn {
-    background: #8A2F29;
+    background: var(--danger-deep);
 }
 
 .toast svg {
@@ -936,47 +910,9 @@ table.grid tbody td.cell:first-of-type {
 }
 
 /* ============================================================
-   Páginas heredadas (employee.html, settings.html): mismas reglas de
-   antes, solo remapeadas a tokens.css. Su layout se rediseñará cuando
-   les toque su propia tarea del roadmap.
+   Formularios y tarjetas de las vistas de gestión
+   (empleados, configuración, mi semana)
    ============================================================ */
-.app-header {
-    padding: 1rem 1.5rem;
-    background: var(--brand-deep);
-    color: var(--brand-fg);
-}
-
-.app-header h1 {
-    margin: 0 0 0.25rem;
-    font-size: 1.25rem;
-}
-
-.app-header p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--brand-fg-soft);
-}
-
-.app-header .app-nav {
-    margin-top: 0.5rem;
-}
-
-.app-header .app-nav a {
-    color: var(--brand-fg-soft);
-}
-
-.app-header .app-nav .btn-back {
-    background: var(--accent);
-    border-color: transparent;
-    color: var(--accent-ink);
-    box-shadow: 0 1px 0 #24a35c, 0 2px 8px -2px rgba(0, 0, 0, .35);
-}
-
-.app-header .app-nav .btn-back:hover {
-    background: var(--accent-hover);
-    color: var(--accent-ink);
-}
-
 main {
     padding: 1rem;
 }
@@ -1169,7 +1105,7 @@ main {
 }
 
 .employee-details summary:hover {
-    background: var(--paper-soft, rgba(0, 0, 0, 0.02));
+    background: var(--paper-soft);
 }
 
 .employee-details[open] summary {
@@ -1230,7 +1166,7 @@ main {
     height: 1.4rem;
     border-radius: 999px;
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-ink);
     font-size: 1rem;
     line-height: 1;
 }
@@ -1319,7 +1255,7 @@ main {
     height: 34px;
     border-radius: var(--r-sm);
     background: var(--brand);
-    color: #fff;
+    color: var(--accent-ink);
     display: grid;
     place-items: center;
 }
@@ -1502,7 +1438,7 @@ main {
 
     .print-header p {
         margin: 4px 0 0;
-        color: #444;
+        color: var(--print-ink-soft);
         font-size: 12px;
     }
 
@@ -1524,7 +1460,7 @@ main {
     th.name-col,
     td.name-col {
         position: static;
-        background: #fff;
+        background: var(--surface);
     }
 
     table.grid tr {

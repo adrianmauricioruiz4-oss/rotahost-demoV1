@@ -4,34 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turnos — Empleados</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>Empleados</h1>
-        <p class="app-nav">
-            <a href="index.html" class="btn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver al cuadrante</a>
-        </p>
-    </header>
+    <div class="app">
+        <aside class="sidebar" id="shell-sidebar"></aside>
 
-    <main>
-        <p id="status-message" class="status-message" hidden></p>
+        <div class="main">
+            <div class="topbar">
+                <h1 class="dash-title">Empleados</h1>
+                <div class="spring"></div>
+            </div>
 
-        <section class="settings-section">
-            <details class="new-employee-details">
-                <summary><span class="plus-icon">+</span> Añadir empleado</summary>
-                <form id="new-employee-form" class="employee-card"></form>
-            </details>
-        </section>
+            <main class="dash-main">
+                <p id="status-message" class="status-message" hidden></p>
 
-        <section class="settings-section">
-            <h2>Equipo</h2>
-            <p id="employees-empty" hidden>Todavía no hay empleados en este venue.</p>
-            <div id="employees-list"></div>
-        </section>
-    </main>
+                <section class="settings-section">
+                    <details class="new-employee-details">
+                        <summary><span class="plus-icon">+</span> Añadir empleado</summary>
+                        <form id="new-employee-form" class="employee-card"></form>
+                    </details>
+                </section>
 
+                <section class="settings-section">
+                    <h2>Equipo</h2>
+                    <p id="employees-empty" hidden>Todavía no hay empleados en este venue.</p>
+                    <div id="employees-list"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/shell.js"></script>
     <script src="js/employees.js"></script>
 </body>
 </html>

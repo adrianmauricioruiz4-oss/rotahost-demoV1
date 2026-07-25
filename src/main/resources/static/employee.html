@@ -4,114 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turnos — Mi semana</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/tokens.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>Mi semana</h1>
-        <p class="app-nav">
-            <span id="whoami-label"></span>
-            <a href="index.html" class="btn-back" id="back-or-logout-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="back-or-logout-label">Volver al cuadrante</span></a>
-        </p>
-    </header>
+    <div class="app">
+        <aside class="sidebar" id="shell-sidebar"></aside>
 
-    <main>
-        <p id="status-message" class="status-message" hidden></p>
-
-        <section class="settings-section">
-            <form id="lookup-form" class="generate-form">
-                <label id="employee-select-field" hidden>
-                    Ver semana de
-                    <select id="employee-select"></select>
-                </label>
-                <div class="week-nav-inline">
-                    <button type="button" class="wk-btn" id="wk-prev" aria-label="Semana anterior">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                    </button>
-                    <label>
-                        Año ISO
-                        <input type="number" id="iso-year-input" min="2000" required>
-                    </label>
-                    <label>
-                        Semana ISO
-                        <input type="number" id="iso-week-input" min="1" max="53" required>
-                    </label>
-                    <button type="button" class="wk-btn" id="wk-next" aria-label="Semana siguiente">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
-                    </button>
-                </div>
-                <button type="submit">Ver semana</button>
-            </form>
-        </section>
-
-        <section class="settings-section">
-            <h2 id="employee-heading" hidden></h2>
-            <div class="schedule-wrapper">
-                <table id="week-table" class="schedule-table">
-                    <thead>
-                        <tr id="week-head-row"></tr>
-                    </thead>
-                    <tbody>
-                        <tr id="week-body-row"></tr>
-                    </tbody>
-                </table>
+        <div class="main">
+            <div class="topbar">
+                <h1 class="dash-title">Mi semana</h1>
+                <div class="spring"></div>
             </div>
-        </section>
 
-        <section class="settings-section" id="timeclock-section" hidden>
-            <h2>Fichar</h2>
-            <p id="timeclock-status" class="status-message"></p>
-            <button type="button" id="timeclock-button" class="btn btn-primary"></button>
-        </section>
+            <main class="dash-main">
+                <p id="status-message" class="status-message" hidden></p>
 
-        <section class="settings-section" id="preferences-section">
-            <h2>Mis preferencias</h2>
-            <ul id="preferences-list" class="preferences-list"></ul>
+                <section class="settings-section">
+                    <form id="lookup-form" class="generate-form">
+                        <label id="employee-select-field" hidden>
+                            Ver semana de
+                            <select id="employee-select"></select>
+                        </label>
+                        <div class="week-nav-inline">
+                            <button type="button" class="wk-btn" id="wk-prev" aria-label="Semana anterior">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
+                            </button>
+                            <label>
+                                Año ISO
+                                <input type="number" id="iso-year-input" min="2000" required>
+                            </label>
+                            <label>
+                                Semana ISO
+                                <input type="number" id="iso-week-input" min="1" max="53" required>
+                            </label>
+                            <button type="button" class="wk-btn" id="wk-next" aria-label="Semana siguiente">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+                            </button>
+                        </div>
+                        <button type="submit">Ver semana</button>
+                    </form>
+                </section>
 
-            <form id="preference-form" class="generate-form">
-                <fieldset id="preference-fieldset" disabled>
-                    <label>
-                        Tipo
-                        <select id="pref-type-input">
-                            <option value="PREFERS_DAY">Prefiero un día</option>
-                            <option value="AVOIDS_DAY">Evito un día</option>
-                            <option value="PREFERS_SHIFT">Prefiero un turno</option>
-                            <option value="AVOIDS_SHIFT">Evito un turno</option>
-                            <option value="UNAVAILABLE">No disponible (fecha concreta)</option>
-                        </select>
-                    </label>
-                    <label id="pref-day-field">
-                        Día de la semana
-                        <select id="pref-day-input">
-                            <option value="MONDAY">Lunes</option>
-                            <option value="TUESDAY">Martes</option>
-                            <option value="WEDNESDAY">Miércoles</option>
-                            <option value="THURSDAY">Jueves</option>
-                            <option value="FRIDAY">Viernes</option>
-                            <option value="SATURDAY">Sábado</option>
-                            <option value="SUNDAY">Domingo</option>
-                        </select>
-                    </label>
-                    <label id="pref-shift-field" hidden>
-                        Turno
-                        <select id="pref-shift-input"></select>
-                    </label>
-                    <label id="pref-date-field" hidden>
-                        Fecha
-                        <input type="date" id="pref-date-input">
-                    </label>
-                    <label id="pref-weight-field">
-                        Peso (1-5)
-                        <input type="number" id="pref-weight-input" min="1" max="5" value="3">
-                    </label>
-                    <button type="submit">Añadir preferencia</button>
-                </fieldset>
-            </form>
-            <p id="preference-hint" class="status-message">Consulta tu semana para poder añadir preferencias.</p>
-        </section>
-    </main>
+                <section class="settings-section">
+                    <h2 id="employee-heading" hidden></h2>
+                    <div class="schedule-wrapper">
+                        <table id="week-table" class="schedule-table">
+                            <thead>
+                                <tr id="week-head-row"></tr>
+                            </thead>
+                            <tbody>
+                                <tr id="week-body-row"></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
+                <section class="settings-section" id="timeclock-section" hidden>
+                    <h2>Fichar</h2>
+                    <p id="timeclock-status" class="status-message"></p>
+                    <button type="button" id="timeclock-button" class="btn btn-primary"></button>
+                </section>
+
+                <section class="settings-section" id="preferences-section">
+                    <h2>Mis preferencias</h2>
+                    <ul id="preferences-list" class="preferences-list"></ul>
+
+                    <form id="preference-form" class="generate-form">
+                        <fieldset id="preference-fieldset" disabled>
+                            <label>
+                                Tipo
+                                <select id="pref-type-input">
+                                    <option value="PREFERS_DAY">Prefiero un día</option>
+                                    <option value="AVOIDS_DAY">Evito un día</option>
+                                    <option value="PREFERS_SHIFT">Prefiero un turno</option>
+                                    <option value="AVOIDS_SHIFT">Evito un turno</option>
+                                    <option value="UNAVAILABLE">No disponible (fecha concreta)</option>
+                                </select>
+                            </label>
+                            <label id="pref-day-field">
+                                Día de la semana
+                                <select id="pref-day-input">
+                                    <option value="MONDAY">Lunes</option>
+                                    <option value="TUESDAY">Martes</option>
+                                    <option value="WEDNESDAY">Miércoles</option>
+                                    <option value="THURSDAY">Jueves</option>
+                                    <option value="FRIDAY">Viernes</option>
+                                    <option value="SATURDAY">Sábado</option>
+                                    <option value="SUNDAY">Domingo</option>
+                                </select>
+                            </label>
+                            <label id="pref-shift-field" hidden>
+                                Turno
+                                <select id="pref-shift-input"></select>
+                            </label>
+                            <label id="pref-date-field" hidden>
+                                Fecha
+                                <input type="date" id="pref-date-input">
+                            </label>
+                            <label id="pref-weight-field">
+                                Peso (1-5)
+                                <input type="number" id="pref-weight-input" min="1" max="5" value="3">
+                            </label>
+                            <button type="submit">Añadir preferencia</button>
+                        </fieldset>
+                    </form>
+                    <p id="preference-hint" class="status-message">Consulta tu semana para poder añadir preferencias.</p>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/shell.js"></script>
     <script src="js/employee.js"></script>
 </body>
 </html>
