@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "turnos-dev",
+      "runtimeExecutable": ".claude\\run-dev.bat",
+      "runtimeArgs": [],
+      "port": 8080
+    }
+  ]
+}
