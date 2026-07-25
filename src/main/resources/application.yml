@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: proyecto
+
+  # Perfil usado si no se activa ninguno explícitamente (SPRING_PROFILES_ACTIVE).
+  # Desarrollo local -> H2 en memoria (application-dev.yml). Para producción con
+  # MySQL, activa un perfil que no sea "dev" (o sobrescribe el datasource).
+  profiles:
+    default: dev
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:turnos}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false

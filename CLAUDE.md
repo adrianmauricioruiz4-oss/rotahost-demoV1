@@ -1,0 +1,281 @@
+# CLAUDE.md — Turnos (gestor de cuadrantes para hostelería)
+
+Este fichero es el contrato de trabajo entre el desarrollador y Claude Code.
+Léelo entero antes de tocar nada.
+
+---
+
+## 1. Qué estamos construyendo
+
+Una aplicación web que genera cuadrantes semanales rotativos para negocios de hostelería
+(bares, restaurantes) de **8 a 15 empleados**, teniendo en cuenta las preferencias de días
+y franjas horarias de cada persona.
+
+**Filosofía del producto: copiloto, no piloto automático.**
+El sistema *propone* un cuadrante. El encargado lo revisa, lo edita y lo publica.
+Nunca se publica nada sin intervención humana. Esta decisión no se discute ni se
+"optimiza" en fases posteriores sin aprobación explícita.
+
+**Anti-objetivos (no hagas esto):**
+- No usar un LLM para generar el cuadrante. La asignación es **determinista**, en Java.
+  Los LLM fallan en satisfacción de restricciones y un fallo aquí es un incumplimiento
+  del convenio, no un bug cosmético.
+- No meter Timefold/OptaPlanner/OR-Tools en la V1. Para 15 empleados sobra un greedy.
+- No microservicios, no Docker Compose de 6 contenedores, no Kafka. Un monolito.
+- No React. Vanilla JS.
+
+---
+
+## 2. Stack
+
+| Capa | Tecnología |
+|---|---|
+| Backend | Java 21, Spring Boot 4.1.0 (Web, Data JPA, Validation) |
+| BD | MySQL 8 (H2 en memoria para tests) |
+| Frontend | HTML + CSS + JavaScript vanilla, servido desde `src/main/resources/static` |
+| Tests | JUnit 5 + AssertJ |
+| Build | Maven wrapper (`./mvnw`) |
+
+---
+
+## 3. Reglas de trabajo (IMPORTANTES)
+
+1. **Propón un plan antes de escribir código.** Para cada tarea del roadmap: expón qué
+   ficheros vas a crear/tocar y espera confirmación. No empieces a generar código a lo loco.
+2. **Una tarea del roadmap = una sesión de trabajo = un commit.** No agrupes tareas.
+3. **Ejecuta `./mvnw compile` después de cada tarea.** Si no compila, arréglalo antes de
+   seguir. Si tocaste tests o lógica de dominio, ejecuta `./mvnw test`.
+4. **Commit automático al terminar cada tarea**, solo si compila y los tests pasan.
+   Formato Conventional Commits, en inglés, imperativo:
+   ```
+   feat(schedule): add hard constraint validator for rest periods
+   fix(employee): prevent duplicate email on update
+   test(engine): cover rotation fairness across 4 weeks
+   docs(readme): document API endpoints
+   chore(deps): bump spring boot to 3.3.2
+   ```
+   Comando: `git add -A && git commit -m "<mensaje>"`.
+   **Nunca hagas `git push` sin que te lo pida.** Nunca hagas `--force`, `reset --hard`,
+   ni reescribas historia.
+5. **Marca la casilla del roadmap** en este mismo fichero al terminar la tarea, en el
+   mismo commit.
+6. Si una decisión de diseño no está clara, **pregunta**. No inventes requisitos de negocio.
+
+---
+
+## 4. Arquitectura: package-by-feature
+
+```
+com.generador.horarios.proyecto
+├── employee/        Employee, EmployeeRepository, EmployeeService, EmployeeController, dto/
+├── preference/      Preference, ...
+├── shift/           ShiftTemplate, ShiftAssignment, ...
+├── schedule/        Schedule, ScheduleService, ScheduleController, ...
+│   └── engine/      ScheduleGenerator, ScheduleValidator, ConstraintViolation
+├── venue/           Venue (el local), CoverageRequirement
+└── shared/          config, excepciones, GlobalExceptionHandler
+```
+
+Reglas: los controllers no ven entidades JPA (usa DTOs con records). La lógica vive en
+services. `engine` no depende de Spring — Java puro, para poder testearlo sin contexto.
+
+---
+
+## 5. Modelo de dominio (V1)
+
+- **Venue** — el local. Horario de apertura, franjas definidas.
+- **Employee** — nombre, email, tipo de contrato (`FULL_TIME` 40h / `PART_TIME` con
+  `contractHours`), activo sí/no.
+- **ShiftTemplate** — turno tipo: `MAÑANA` (08:00–16:00), `TARDE` (16:00–00:00),
+  `PARTIDO` (12:00–16:00 + 20:00–00:00). Configurable por venue.
+- **CoverageRequirement** — cuánta gente hace falta por día de semana + franja.
+  Ej.: viernes TARDE → 3 personas.
+- **Preference** — `employeeId`, tipo (`PREFERS_DAY`, `AVOIDS_DAY`, `PREFERS_SHIFT`,
+  `AVOIDS_SHIFT`, `UNAVAILABLE`), valor, peso (1–5). `UNAVAILABLE` es restricción **dura**
+  (vacaciones, baja, cita médica); el resto son blandas.
+- **Schedule** — un cuadrante semanal. Estado: `DRAFT` → `PUBLISHED`. Semana ISO + año.
+- **ShiftAssignment** — employee + fecha + shiftTemplate + scheduleId.
+
+---
+
+## 6. Restricciones
+
+**Duras — si se violan, el cuadrante NO se guarda ni se publica. Nunca.**
+
+| ID | Regla |
+|---|---|
+| H1 | Mínimo **12 horas** entre el fin de una jornada y el inicio de la siguiente |
+| H2 | Mínimo **1,5 días** (36h) de descanso semanal ininterrumpido |
+| H3 | Máximo **40h** semanales (o `contractHours` si es parcial) |
+| H4 | Máximo **9h** de trabajo efectivo al día |
+| H5 | No asignar a alguien marcado `UNAVAILABLE` esa fecha |
+| H6 | No asignar dos turnos solapados a la misma persona |
+| H7 | Cobertura mínima cumplida en cada franja (si no se puede: se avisa, no se rompe H1–H6) |
+
+Estas restricciones dejalas por defecto, pero crea la opcion para que el usuario tenga permiso para modificarlas
+
+
+
+**Blandas — se maximizan, se ponderan, nunca invalidan un cuadrante.**
+
+| ID | Regla |
+|---|---|
+| S1 | Respetar preferencias de día/franja según su peso |
+| S2 | **Equidad**: repartir los turnos "malos" (viernes/sábado noche, domingos, festivos) |
+| S3 | Evitar rotación brusca (tarde → mañana al día siguiente aunque cumpla las 12h) |
+| S4 | Agrupar los días libres en vez de dispersarlos |
+
+`ScheduleValidator` es **obligatorio** y se ejecuta siempre antes de persistir, venga el
+cuadrante de donde venga (generador, edición manual del encargado, import). Devuelve
+`List<ConstraintViolation>` con severidad `HARD`/`SOFT`. Si hay alguna `HARD`, se rechaza
+con 422 y el mensaje explicando cuál y de quién.
+
+---
+
+## 7. Algoritmo (V1)
+
+Greedy con puntuación y backtracking limitado. Nada de heurísticas exóticas.
+
+```
+1. Ordenar (día, franja) por dificultad de cobertura (menos candidatos disponibles primero)
+2. Para cada hueco a cubrir:
+   a. Candidatos = empleados que NO violan ninguna restricción dura
+   b. Puntuar cada candidato:
+        + peso de sus preferencias que se cumplen
+        - penalización por turnos malos ya acumulados esta semana Y en las 3 anteriores  (equidad)
+        - penalización por rotación brusca
+        - penalización por desviación de sus horas de contrato
+   c. Asignar el de mayor puntuación
+   d. Si no hay candidatos: registrar hueco sin cubrir y seguir. NUNCA relajar una dura.
+3. Devolver Schedule en DRAFT + lista de huecos sin cubrir + informe de equidad
+```
+
+El histórico de las 3 semanas anteriores es lo que hace que la rotación sea justa a lo
+largo del tiempo. No lo omitas.
+
+---
+
+## 8. Roadmap
+
+Marca las casillas al completar. Una tarea, un commit.
+
+### Fase 1 — Cimientos
+- [x] T1.1 — `./mvnw` init, `pom.xml`, estructura de paquetes, `application.yml` (MySQL + perfil `test` con H2), `.gitignore`
+- [x] T1.2 — Entidades JPA + repositorios: Venue, Employee, ShiftTemplate, CoverageRequirement
+- [x] T1.3 — CRUD de Employee (service + controller + DTOs + validación + tests)
+- [x] T1.4 — CRUD de ShiftTemplate y CoverageRequirement
+- [x] T1.5 — `GlobalExceptionHandler` + respuesta de error uniforme
+- [x] T1.6 — Seed de datos de demo (un bar, 10 empleados, turnos y coberturas realistas)
+- [x] T1.7 — CRUD parcial de Venue (`GET`/`PUT`, sin alta/baja): leer y editar nombre y horario de apertura/cierre
+
+### Fase 2 — El núcleo
+- [x] T2.1 — Entidades Preference, Schedule, ShiftAssignment + repositorios
+- [x] T2.2 — CRUD de Preference (el empleado gestiona las suyas)
+- [x] T2.3 — **`ScheduleValidator`**: H1–H7 + tests exhaustivos. Empieza por aquí, antes que el generador.
+- [x] T2.4 — `ScheduleGenerator`: greedy sin equidad ni histórico (que cubra y no viole duras)
+- [x] T2.5 — Puntuación de preferencias blandas (S1)
+- [x] T2.6 — Equidad con histórico de 3 semanas (S2) + informe de equidad
+- [x] T2.7 — Rotación suave y agrupación de libranzas (S3, S4)
+- [x] T2.8 — `POST /api/schedules/generate` → devuelve DRAFT + huecos + informe
+
+### Fase 3 — Interfaz
+- [x] T3.1 — Vista cuadrante semanal (tabla días × empleados), CSS propio, responsive
+- [x] T3.2 — Botón "Generar semana" → pinta el DRAFT
+- [x] T3.3 — **Edición manual**: cambiar una asignación revalida al vuelo y avisa en rojo si rompe una dura
+- [x] T3.4 — Publicar cuadrante (`DRAFT` → `PUBLISHED`, bloquea edición)
+- [x] T3.5 — Vista del empleado: mi semana + gestionar mis preferencias
+- [x] T3.6 — Exportar a PDF/imprimible (el papel de la cocina existe)
+- [x] T3.7 — Mostrar horas de entrada/salida de cada turno en el cuadrante semanal
+- [x] T3.8 — Pantalla de configuración: editar horario del venue y horas de cada turno
+
+### Fase 4 — Salir al mercado
+- [x] T4.1 — Spring Security: roles `MANAGER` / `EMPLOYEE`
+- [x] T4.2 — Multi-tenant básico por `venueId`: cada cuenta (MANAGER o EMPLOYEE) pertenece a un único
+  venue (el de su Employee) y no puede leer ni escribir datos de otro, aunque conozca los IDs
+- [x] T4.3 — Migraciones con Flyway
+- [x] T4.4 — Deploy (Docker + VPS) + `README.md` público
+- [x] T4.5 — Pantalla de login (UI de acceso + "recuperar contraseña"; usa la auth real de T4.1)
+- [x] T4.6 — Panel principal: pantalla de inicio tras el login con el resumen del venue propio
+  (nombre, nº empleados, estado del cuadrante de la semana actual, alertas/conflictos pendientes).
+  Sin listado de locales ni alta de local nuevo: T4.2 fijó una cuenta = un venue; soportar varios
+  sería un cambio de modelo de datos (ver Backlog), no una tarea de UI
+
+### Fase 5 — Empleados: puesto y capacidades
+- [x] T5.1 — Enum/entidad de puesto (camarero, cocinero, ayudante de cocina, responsable de
+  sala, encargado, repartidor) asignable a Employee (uno o varios puestos por persona)
+- [x] T5.2 — Capacidades del empleado: puede turno partido, puede apertura/cierre, hora mínima
+  de entrada, hora máxima de salida, notas internas del encargado
+- [x] T5.3 — `CoverageRequirement` por puesto (ej. sábado 21–00: 2 camareros + 2 cocineros +
+  1 encargado); el generador y el validator deben respetar el puesto requerido, no solo el número
+- [x] T5.4 — UI: ficha de empleado ampliada con puesto y capacidades
+
+### Fase 6 — Reglas avanzadas del local
+- [ ] T6.1 — Festivos y temporadas/horario especial por venue
+- [ ] T6.2 — Reglas organizativas opcionales configurables: máx. días consecutivos, máx. cierres
+  consecutivos, máx. turnos partidos, mínimo de jornada completa por turno, margen de horas sobre
+  el contrato
+- [ ] T6.3 — Nivel intermedio "flexible" en `ScheduleValidator` (hoy es binario HARD/SOFT):
+  regla que puede incumplirse si no hay otra solución pero genera advertencia visible — **decisión
+  de diseño a confirmar con el usuario antes de tocar el validator**, no asumir semántica
+
+### Fase 7 — Cuadrante: interacciones avanzadas
+- [ ] T7.1 — Arrastrar y soltar turnos entre empleados en la tabla del cuadrante
+- [ ] T7.2 — Copiar el cuadrante de la semana anterior como punto de partida
+- [ ] T7.3 — Duplicar / eliminar un turno individual desde la UI
+- [ ] T7.4 — Bloquear turno (`locked` en ShiftAssignment) para que el generador no lo modifique
+- [ ] T7.5 — Regenerar parcialmente: recalcular solo huecos/turnos no bloqueados de un rango de
+  días sin tocar el resto del cuadrante
+- [ ] T7.6 — Mensajes de conflicto en lenguaje natural por persona (mapear cada
+  `ConstraintViolation` a un texto legible, ej. "María supera sus horas contratadas en 3h")
+
+### Fase 8 — Cambios e incidencias
+- [ ] T8.1 — Entidad `Incident` (tipo: baja, retraso, ausencia, cambio de disponibilidad,
+  solicitud de intercambio, necesidad de refuerzo) + CRUD
+- [ ] T8.2 — Botón "Imprevisto" en la vista de cuadrante + formulario rápido de alta
+- [ ] T8.3 — Motor de reorganización parcial: dado un incidente, identificar turnos afectados y
+  candidatos a cubrirlos sin violar ninguna restricción dura
+- [ ] T8.4 — UI: mostrar la propuesta de reorganización (turnos afectados, candidatos, impacto en
+  horas/descansos) y esperar confirmación explícita del encargado antes de aplicarla
+- [ ] T8.5 — Solicitud de intercambio entre empleados: flujo de petición → aprobación del encargado
+
+### Fase 9 — Acceso empleados: intercambios y fichaje
+- [ ] T9.1 — Aceptar/rechazar propuestas de intercambio desde la vista de empleado
+- [ ] T9.2 — Notificaciones básicas in-app al publicar cuadrante o al recibir una propuesta
+- [ ] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración)
+- [ ] T9.4 — Comparativa horas planificadas vs. horas fichadas
+
+### Fase 10 — Configuración y cuenta
+- [ ] T10.1 — Datos del negocio y gestión de usuarios administradores
+- [ ] T10.2 — Formato horario, zona horaria, idioma
+- [ ] T10.3 — Exportación de datos
+- [ ] T10.4 — Historial de cambios (auditoría básica)
+
+### Backlog (NO empezar sin pedirlo)
+- LLM para parsear preferencias en lenguaje natural ("el finde del 20 no puedo, tengo boda")
+- LLM para explicar en castellano por qué a Juan le tocó el domingo
+- Notificaciones por WhatsApp/email al publicar (T9.2 cubre solo in-app)
+- Código PIN / QR / geolocalización para el fichaje (T9.3 cubre solo el registro simple)
+- Gestión de festivos por CCAA (calendario oficial automático; T6.1 cubre solo festivos manuales)
+- Una cuenta gestionando varios venues (cadenas/multi-local). T4.2 decidió deliberadamente una
+  cuenta = un venue para V1 (encaja con el Employee-con-credenciales de T4.1 y con el público
+  objetivo del CLAUDE.md); soportarlo exigiría desligar "usuario" de "empleado" (entidad User
+  separada o Employee↔Venue N:M), no un simple cambio de UI
+
+---
+
+## 9. Definition of Done
+
+Una tarea está terminada cuando:
+- [ ] `./mvnw compile` pasa
+- [ ] `./mvnw test` pasa (toda tarea de `engine` o service **necesita** tests)
+- [ ] Sin warnings nuevos
+- [ ] JavaDoc en los métodos públicos de services y del engine
+- [ ] Casilla marcada en este fichero
+- [ ] Commit hecho con mensaje Conventional Commit
+
+## 10. Contexto legal (no es opinión, son las duras)
+
+Convenio de hostelería + Estatuto de los Trabajadores. Las restricciones H1–H4 salen de
+ahí. Si dudas de un número, **pregunta antes de codificar**, no lo estimes. Un cuadrante
+mal generado que firma el dueño del bar es un problema suyo con Inspección de Trabajo, y
+nuestro problema con él.

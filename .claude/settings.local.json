@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unzip -l rotahost-proyecto.zip)",
+      "Bash(rm -rf zipx)",
+      "Bash(mkdir -p zipx)",
+      "Bash(unzip -q \"C:/Users/User/Documents/Claude Playground/rotahost-proyecto.zip\" -d zipx)"
+    ]
+  }
+}

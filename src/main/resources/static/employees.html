@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnos — Empleados</title>
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Empleados</h1>
+        <p class="app-nav">
+            <a href="index.html" class="btn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver al cuadrante</a>
+        </p>
+    </header>
+
+    <main>
+        <p id="status-message" class="status-message" hidden></p>
+
+        <section class="settings-section">
+            <details class="new-employee-details">
+                <summary><span class="plus-icon">+</span> Añadir empleado</summary>
+                <form id="new-employee-form" class="employee-card"></form>
+            </details>
+        </section>
+
+        <section class="settings-section">
+            <h2>Equipo</h2>
+            <p id="employees-empty" hidden>Todavía no hay empleados en este venue.</p>
+            <div id="employees-list"></div>
+        </section>
+    </main>
+
+    <script src="js/employees.js"></script>
+</body>
+</html>
