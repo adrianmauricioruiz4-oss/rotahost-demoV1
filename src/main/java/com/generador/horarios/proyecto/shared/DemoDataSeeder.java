@@ -4,6 +4,7 @@ import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
 import com.generador.horarios.proyecto.employee.EmployeeRepository;
 import com.generador.horarios.proyecto.employee.EmployeeRole;
+import com.generador.horarios.proyecto.employee.Position;
 import com.generador.horarios.proyecto.schedule.Schedule;
 import com.generador.horarios.proyecto.schedule.ScheduleRepository;
 import com.generador.horarios.proyecto.schedule.engine.ConstraintViolation;
@@ -25,6 +26,7 @@ import java.time.LocalTime;
 import java.time.temporal.IsoFields;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -34,10 +36,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Siembra un restaurante de demo con turnos, cobertura, 5 empleados y un cuadrante ya
- * generado para la semana ISO actual, para poder ver la app poblada (panel, cuadrante) nada
- * más arrancar, sin pasos manuales. No se ejecuta en el perfil "test" y es idempotente (solo
- * siembra si la base de datos está vacía).
+ * Siembra un bar de demo con turnos, cobertura, 5 empleados y un cuadrante ya generado para
+ * la semana ISO actual, para poder ver la app poblada (panel, cuadrante) nada más arrancar,
+ * sin pasos manuales. No se ejecuta en el perfil "test" y es idempotente (solo siembra si la
+ * base de datos está vacía).
+ *
+ * <p>Las cifras concretas (5 personas, sus contratos y la cobertura) están elegidas para que
+ * encajen entre sí, no copiadas del CLAUDE.md: la cobertura pedida tiene que caber en las
+ * horas contratadas del equipo o la demo arranca con huecos imposibles de cubrir. Si tocas
+ * una de las dos, ajusta la otra; {@code demoCoverageFitsWithinContractedHours} lo comprueba.
  */
 @Component
 @Profile("!test")
@@ -84,7 +91,10 @@ public class DemoDataSeeder implements CommandLineRunner {
             return;
         }
 
-        Venue venue = venueRepository.save(new Venue("Restaurante", LocalTime.of(8, 0), LocalTime.of(2, 0)));
+        // El nombre cuadra con el dominio de los correos del equipo, y el cierre con el
+        // final del último turno (TARDE acaba a medianoche): antes decía "Restaurante" y
+        // cerraba a las 02:00, una hora que ningún turno de la demo llegaba a cubrir.
+        Venue venue = venueRepository.save(new Venue("Bar La Esquina", LocalTime.of(8, 0), LocalTime.MIDNIGHT));
 
         ShiftTemplate manana = shiftTemplateRepository.save(new ShiftTemplate("MAÑANA", venue,
                 List.of(new ShiftSegment(LocalTime.of(8, 0), LocalTime.of(16, 0)))));
@@ -169,13 +179,35 @@ public class DemoDataSeeder implements CommandLineRunner {
         return requirements;
     }
 
-    /** Equipo reducido a 5 personas (encargada incluida): más realista para un local pequeño. */
+    /**
+     * Equipo de 5 personas (encargada incluida) dimensionado contra la cobertura: dos
+     * jornadas completas que sostienen el día a día y tres parciales que cubren picos y
+     * libranzas. Suman 140h contratadas para 128h de cobertura, así que el cuadrante sale
+     * entero y aún queda margen; ver {@link #buildCoverageRequirements}.
+     *
+     * <p>Cada persona lleva su puesto y sus capacidades porque son datos que la ficha de
+     * empleado y el generador ya saben usar (Fase 5), y una demo con todos los puestos
+     * vacíos no enseña esa parte del producto.
+     */
     private List<Employee> buildEmployees(Venue venue) {
-        return List.of(
-                new Employee("Ana García", "ana.garcia@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("Javier Martínez", "javier.martinez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("Laura Fernández", "laura.fernandez@barlaesquina.com", ContractType.FULL_TIME, null, venue),
-                new Employee("Carlos Rodríguez", "carlos.rodriguez@barlaesquina.com", ContractType.PART_TIME, 25, venue),
-                new Employee("María López", "maria.lopez@barlaesquina.com", ContractType.PART_TIME, 25, venue));
+        Employee ana = new Employee("Ana García", "ana.garcia@barlaesquina.com", ContractType.FULL_TIME, null, venue);
+        ana.setPositions(Set.of(Position.ENCARGADO, Position.RESPONSABLE_SALA));
+        ana.setInternalNotes("Encargada. Lleva el cierre de caja los viernes y sábados.");
+
+        Employee javier = new Employee("Javier Martínez", "javier.martinez@barlaesquina.com", ContractType.FULL_TIME, null, venue);
+        javier.setPositions(Set.of(Position.COCINERO));
+
+        Employee laura = new Employee("Laura Fernández", "laura.fernandez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        laura.setPositions(Set.of(Position.CAMARERO, Position.RESPONSABLE_SALA));
+
+        Employee carlos = new Employee("Carlos Rodríguez", "carlos.rodriguez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        carlos.setPositions(Set.of(Position.CAMARERO));
+        carlos.setCanWorkSplitShift(false);
+        carlos.setInternalNotes("Vive fuera del pueblo: no le compensa volver, nada de turnos partidos.");
+
+        Employee maria = new Employee("María López", "maria.lopez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        maria.setPositions(Set.of(Position.AYUDANTE_COCINA, Position.CAMARERO));
+
+        return List.of(ana, javier, laura, carlos, maria);
     }
 }
