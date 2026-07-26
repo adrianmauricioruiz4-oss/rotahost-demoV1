@@ -71,7 +71,7 @@
         brand.className = "brand";
         brand.innerHTML =
             '<div class="logo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 2v3M16 2v3M3 9h18"/><rect x="3" y="5" width="18" height="17" rx="3"/></svg></div>' +
-            '<div><span class="brandmark">Turnos</span><small id="shell-venue-name">Cargando…</small></div>';
+            '<div><span class="brandmark">RotaHost</span><small id="shell-venue-name">Cargando…</small></div>';
         target.appendChild(brand);
 
         const nav = document.createElement("nav");

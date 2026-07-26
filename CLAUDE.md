@@ -1,4 +1,4 @@
-# CLAUDE.md — Turnos (gestor de cuadrantes para hostelería)
+# CLAUDE.md — RotaHost (gestor de cuadrantes para hostelería)
 
 Este fichero es el contrato de trabajo entre el desarrollador y Claude Code.
 Léelo entero antes de tocar nada.
@@ -241,7 +241,7 @@ Marca las casillas al completar. Una tarea, un commit.
 ### Fase 9 — Acceso empleados: intercambios y fichaje
 - [ ] T9.1 — Aceptar/rechazar propuestas de intercambio desde la vista de empleado
 - [ ] T9.2 — Notificaciones básicas in-app al publicar cuadrante o al recibir una propuesta
-- [ ] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración)
+- [x] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración)
 - [ ] T9.4 — Comparativa horas planificadas vs. horas fichadas
 
 ### Fase 10 — Configuración y cuenta
