@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.generador.horarios.proyecto.employee.ContractType;
 import com.generador.horarios.proyecto.employee.Employee;
 import com.generador.horarios.proyecto.employee.EmployeeRepository;
 import com.generador.horarios.proyecto.schedule.Schedule;
@@ -24,6 +25,7 @@ import com.generador.horarios.proyecto.venue.CoverageRequirementRepository;
 import com.generador.horarios.proyecto.venue.Venue;
 import com.generador.horarios.proyecto.venue.VenueRepository;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -96,13 +98,69 @@ class DemoDataSeederTest {
         verify(shiftTemplateRepository, times(3)).save(any(ShiftTemplate.class));
 
         verify(coverageRequirementRepository).saveAll(coverageCaptor.capture());
-        Assertions.assertThat(coverageCaptor.getValue()).hasSize(21);
+        // MAÑANA + TARDE los 7 días, más un PARTIDO de refuerzo viernes y sábado.
+        Assertions.assertThat(coverageCaptor.getValue()).hasSize(16);
 
         verify(employeeRepository).saveAll(employeeCaptor.capture());
         Assertions.assertThat(employeeCaptor.getValue()).hasSize(5);
 
         verify(scheduleRepository).save(any(Schedule.class));
         verify(shiftAssignmentRepository).saveAll(anyList());
+    }
+
+    /**
+     * La demo pedía 200h semanales a un equipo de 170h contratadas, así que 4 turnos
+     * quedaban sin cubrir todas las semanas por pura aritmética y los tres fijos salían
+     * clavados en su máximo legal. No era un fallo del generador: era la cobertura de
+     * demo pidiendo horas que no existen. Este test fija la relación.
+     */
+    @Test
+    void demoCoverageFitsWithinContractedHours() {
+        DemoDataSeeder seeder = newSeeder();
+
+        when(venueRepository.count()).thenReturn(0L);
+        when(venueRepository.save(any(Venue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(shiftTemplateRepository.save(any(ShiftTemplate.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(coverageRequirementRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(scheduleGenerator.generate(any(), anyList(), anyList(), anyList(), anyList(), any()))
+                .thenReturn(new GenerationResult(List.of(), List.of(), List.of()));
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+        when(scheduleRepository.save(any(Schedule.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        seeder.run();
+
+        verify(coverageRequirementRepository).saveAll(coverageCaptor.capture());
+        verify(employeeRepository).saveAll(employeeCaptor.capture());
+
+        double demandedHours = coverageCaptor.getValue().stream()
+                .mapToDouble(requirement -> requirement.getRequiredCount() * shiftHours(requirement.getShiftTemplate()))
+                .sum();
+        int contractedHours = employeeCaptor.getValue().stream()
+                .mapToInt(employee -> employee.getContractType() == ContractType.PART_TIME
+                        && employee.getContractHours() != null
+                        ? employee.getContractHours()
+                        : 40)
+                .sum();
+
+        Assertions.assertThat(demandedHours)
+                .as("la cobertura de demo (%sh) debe caber en las horas contratadas (%sh), "
+                        + "o el cuadrante de demo nace con huecos imposibles de cubrir",
+                        demandedHours, contractedHours)
+                .isLessThanOrEqualTo(contractedHours);
+    }
+
+    /** Horas efectivas de un turno, sumando sus segmentos y tratando 00:00 como fin de día. */
+    private double shiftHours(ShiftTemplate template) {
+        return template.getSegments().stream()
+                .mapToInt(segment -> {
+                    int start = segment.getStartTime().toSecondOfDay() / 60;
+                    int end = segment.getEndTime().equals(LocalTime.MIDNIGHT)
+                            ? 24 * 60
+                            : segment.getEndTime().toSecondOfDay() / 60;
+                    return end - start;
+                })
+                .sum() / 60.0;
     }
 
     @Test

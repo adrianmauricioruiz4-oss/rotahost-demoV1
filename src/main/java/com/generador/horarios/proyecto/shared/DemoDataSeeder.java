@@ -143,19 +143,28 @@ public class DemoDataSeeder implements CommandLineRunner {
     }
 
     /**
-     * Plantilla de un equipo pequeño (5 personas): entre semana basta con 1 persona por
-     * turno (3 al día); el refuerzo de TARDE/MAÑANA los viernes y sábados sube el pico a
-     * 5, casi todo el equipo, pero deja margen para que alguien libre ese día. PARTIDO se
-     * queda siempre en 1 (es el turno menos cómodo, no tiene sentido pedir varias).
+     * Cobertura de un equipo pequeño (5 personas): 1 persona en MAÑANA y 1 en TARDE todos
+     * los días, más un PARTIDO de refuerzo viernes y sábado, que son los días fuertes.
+     *
+     * <p>La cifra que manda aquí es la capacidad del equipo, no el gusto por tener el local
+     * bien cubierto: 3 jornadas completas (40h) + 2 parciales (25h) son 170h contratadas,
+     * y cada turno son 8h. Pedir más de 21 turnos por semana es pedir horas que nadie puede
+     * hacer sin romper H3, así que el generador dejaría huecos permanentes por diseño. Con
+     * 16 turnos (128h) el cuadrante sale entero y sobra margen para que las preferencias y
+     * la equidad tengan algo que repartir. {@code demoCoverageFitsWithinContractedHours}
+     * en DemoDataSeederTest vigila que esta relación se siga cumpliendo.
      */
     private List<CoverageRequirement> buildCoverageRequirements(
             Venue venue, ShiftTemplate manana, ShiftTemplate tarde, ShiftTemplate partido) {
         List<CoverageRequirement> requirements = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
+            requirements.add(new CoverageRequirement(venue, day, manana, 1));
+            requirements.add(new CoverageRequirement(venue, day, tarde, 1));
+
             boolean isWeekendPeak = day == DayOfWeek.FRIDAY || day == DayOfWeek.SATURDAY;
-            requirements.add(new CoverageRequirement(venue, day, manana, isWeekendPeak ? 2 : 1));
-            requirements.add(new CoverageRequirement(venue, day, tarde, isWeekendPeak ? 2 : 1));
-            requirements.add(new CoverageRequirement(venue, day, partido, 1));
+            if (isWeekendPeak) {
+                requirements.add(new CoverageRequirement(venue, day, partido, 1));
+            }
         }
         return requirements;
     }
