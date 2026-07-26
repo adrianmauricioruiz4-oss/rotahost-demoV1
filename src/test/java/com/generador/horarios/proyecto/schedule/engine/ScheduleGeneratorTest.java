@@ -353,23 +353,166 @@ class ScheduleGeneratorTest {
 
     @Test
     void doesNotPenalizeConsecutiveWorkDays() {
-        // Ana trabaja lunes y martes seguidos (racha sin huecos); para el
-        // miércoles no hay ningún día suelto que fragmentar, así que no debería
-        // haber penalización de S4 y el desempate vuelve a ser por id más bajo.
+        // Ana trabaja lunes y martes seguidos (racha sin huecos) y Bea solo el lunes; para
+        // el miércoles Ana no fragmenta nada, mientras que a Bea le dejaría el martes
+        // suelto entre dos días trabajados. Ana debe llevarse el miércoles pese a ir con
+        // más horas encima: la racha no se penaliza, el día suelto sí.
+        //
+        // El lunes pide 2 personas para que ambas arranquen con las mismas horas. Con 1
+        // sola el reparto proporcional le daría el martes a Bea (Ana ya vendría cargada
+        // del lunes) y Ana nunca llegaría a tener la racha que este test quiere probar.
+        //
+        // Las puntuaciones del miércoles empatan a propósito: Ana -4 (0,6 de contrato, sin
+        // S4) y Bea -4 (0,4 de contrato, -2 por dejar el martes aislado). El desempate por
+        // id más bajo se lo da a Ana. Si S4 llegara a penalizar la racha, Ana caería a -6 y
+        // el test fallaría, que es justo lo que tiene que vigilar.
         LocalDate wednesday = MONDAY.plusDays(2);
         Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
         Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
-        CoverageRequirement mondayRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+        CoverageRequirement mondayRequirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 2);
         CoverageRequirement tuesdayRequirement = new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1);
         CoverageRequirement wednesdayRequirement = new CoverageRequirement(venue, DayOfWeek.WEDNESDAY, manana, 1);
 
         GenerationResult result = generate(
                 List.of(ana, bea), List.of(mondayRequirement, tuesdayRequirement, wednesdayRequirement), List.of());
 
-        assertThat(result.assignments()).hasSize(3);
+        assertThat(result.assignments()).hasSize(4);
+        ShiftAssignment tuesdayAssignment =
+                result.assignments().stream().filter(a -> a.getDate().equals(MONDAY.plusDays(1))).findFirst().orElseThrow();
+        assertThat(tuesdayAssignment.getEmployee().getId()).isEqualTo(10L);
+
         ShiftAssignment wednesdayAssignment =
                 result.assignments().stream().filter(a -> a.getDate().equals(wednesday)).findFirst().orElseThrow();
         assertThat(wednesdayAssignment.getEmployee().getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void alternatesBetweenEqualCandidatesInsteadOfExhaustingTheFirst() {
+        // Dos jornadas completas idénticas y dos MAÑANAS seguidas. Las dos puntúan igual
+        // (sin preferencias, sin rotación brusca, sin libranza que fragmentar), así que
+        // decide el desempate por horas de contrato: el lunes empatan también ahí y se lo
+        // lleva Ana por id, pero el martes a Bea le quedan 32h por cubrir frente a las 24h
+        // de Ana, y le toca a ella. Con el desempate por id a secas, Ana se llevaba los dos.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        List<CoverageRequirement> requirements = List.of(
+                new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1));
+
+        GenerationResult result = generate(List.of(ana, bea), requirements, List.of());
+
+        assertThat(result.assignments()).hasSize(2);
+        assertThat(countFor(result, 10L)).isEqualTo(1);
+        assertThat(countFor(result, 20L)).isEqualTo(1);
+    }
+
+    @Test
+    void coversEveryShiftWithoutExceedingAnyContract() {
+        // Una MAÑANA cada día (7 turnos, 56h) para una jornada completa (40h) y una parcial
+        // (20h): la cobertura entera sale y nadie pasa de su contrato. Ana llega a sus 5
+        // turnos (40h) y Bea a 2 (16h), porque un tercero la pondría en 24h y rompería H3.
+        // El reparto no puede quitarle cobertura al cuadrante: por eso las horas de
+        // contrato desempatan en vez de sumar a la puntuación.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        Employee bea = employee(20L, "Bea", ContractType.PART_TIME, 20);
+        List<CoverageRequirement> requirements = List.of(
+                new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.TUESDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.WEDNESDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.THURSDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.FRIDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.SATURDAY, manana, 1),
+                new CoverageRequirement(venue, DayOfWeek.SUNDAY, manana, 1));
+
+        GenerationResult result = generate(List.of(ana, bea), requirements, List.of());
+
+        assertThat(result.assignments()).hasSize(7);
+        assertThat(result.uncoveredSlots()).isEmpty();
+        assertThat(countFor(result, 10L)).isEqualTo(5);
+        assertThat(countFor(result, 20L)).isEqualTo(2);
+    }
+
+    @Test
+    void doesNotProposeSplitShiftToSomeoneWhoCannotWorkThem() {
+        ShiftTemplate partido = shiftTemplate("PARTIDO",
+                new ShiftSegment(LocalTime.of(12, 0), LocalTime.of(16, 0)),
+                new ShiftSegment(LocalTime.of(20, 0), LocalTime.MIDNIGHT));
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        ana.setCanWorkSplitShift(false);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, partido, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).hasSize(1);
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void leavesSlotUncoveredRatherThanBreakingACapability() {
+        // La capacidad filtra candidatos, no se relaja: si el único disponible no puede
+        // hacer el turno, el hueco se reporta igual que cuando no hay nadie libre.
+        ShiftTemplate partido = shiftTemplate("PARTIDO",
+                new ShiftSegment(LocalTime.of(12, 0), LocalTime.of(16, 0)),
+                new ShiftSegment(LocalTime.of(20, 0), LocalTime.MIDNIGHT));
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        ana.setCanWorkSplitShift(false);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, partido, 1);
+
+        GenerationResult result = generate(List.of(ana), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).isEmpty();
+        assertThat(result.uncoveredSlots()).hasSize(1);
+        assertThat(result.uncoveredSlots().get(0).missing()).isEqualTo(1);
+    }
+
+    @Test
+    void doesNotProposeTheOpeningShiftToSomeoneWhoCannotOpen() {
+        // MAÑANA arranca a las 08:00, que es la hora de apertura del local.
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        ana.setCanOpen(false);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).hasSize(1);
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void doesNotProposeTheClosingShiftToSomeoneWhoCannotClose() {
+        venue.setClosingTime(LocalTime.MIDNIGHT);
+        Employee ana = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        ana.setCanClose(false);
+        Employee bea = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, tarde, 1);
+
+        GenerationResult result = generate(List.of(ana, bea), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).hasSize(1);
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(20L);
+    }
+
+    @Test
+    void respectsTheEntryAndExitWindowOfEachEmployee() {
+        Employee tooEarly = employee(10L, "Ana", ContractType.FULL_TIME, null);
+        tooEarly.setMinEntryTime(LocalTime.of(10, 0)); // MAÑANA entra a las 08:00
+        Employee tooLate = employee(20L, "Bea", ContractType.FULL_TIME, null);
+        tooLate.setMaxExitTime(LocalTime.of(14, 0)); // MAÑANA sale a las 16:00
+        Employee cecilia = employee(30L, "Cecilia", ContractType.FULL_TIME, null);
+        CoverageRequirement requirement = new CoverageRequirement(venue, DayOfWeek.MONDAY, manana, 1);
+
+        GenerationResult result = generate(List.of(tooEarly, tooLate, cecilia), List.of(requirement), List.of());
+
+        assertThat(result.assignments()).hasSize(1);
+        assertThat(result.assignments().get(0).getEmployee().getId()).isEqualTo(30L);
+    }
+
+    private long countFor(GenerationResult result, Long employeeId) {
+        return result.assignments().stream()
+                .filter(assignment -> assignment.getEmployee().getId().equals(employeeId))
+                .count();
     }
 
     private GenerationResult generate(List<Employee> employees, List<CoverageRequirement> requirements, List<Preference> preferences) {
