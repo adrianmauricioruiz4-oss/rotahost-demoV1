@@ -1092,6 +1092,15 @@ main {
     background: var(--surface-2);
 }
 
+.coverage-input {
+    width: 3.5rem;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 .preferences-list {
     list-style: none;
     margin: 0 0 1rem;

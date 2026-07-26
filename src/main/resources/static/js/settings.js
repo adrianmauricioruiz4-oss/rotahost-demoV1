@@ -64,8 +64,9 @@ async function loadVenue(venueId) {
 
 async function loadShiftTemplates(venueId) {
     const shiftTemplates = await fetchJson("/api/shift-templates");
-    const venueTemplates = shiftTemplates.filter((t) => t.venueId === venueId);
+    const venueTemplates = shiftTemplates.filter((t) => t.venueId === venueId && t.active);
     renderShiftTemplates(venueTemplates, venueId);
+    return venueTemplates;
 }
 
 function renderShiftTemplates(templates, venueId) {
@@ -124,6 +125,24 @@ function buildShiftTemplateCard(template, venueId) {
     saveButton.textContent = "Guardar";
     card.appendChild(saveButton);
 
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.textContent = "Eliminar franja";
+    deleteButton.className = "preference-delete-button";
+    deleteButton.addEventListener("click", async () => {
+        if (!window.confirm(`¿Eliminar la franja "${template.name}"? Se quitará también su cobertura mínima.`)) {
+            return;
+        }
+        try {
+            await fetchJson(`/api/shift-templates/${template.id}`, { method: "DELETE" });
+            setStatusMessage(`Franja "${template.name}" eliminada.`, false);
+            await loadShiftTemplatesAndCoverage(venueId);
+        } catch (error) {
+            setStatusMessage(error.message, true);
+        }
+    });
+    card.appendChild(deleteButton);
+
     card.addEventListener("submit", async (event) => {
         event.preventDefault();
         const body = {
@@ -149,10 +168,106 @@ function buildShiftTemplateCard(template, venueId) {
     return card;
 }
 
+const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+
+async function loadShiftTemplatesAndCoverage(venueId) {
+    const templates = await loadShiftTemplates(venueId);
+    await loadCoverage(venueId, templates);
+}
+
+async function loadCoverage(venueId, templates) {
+    const wrap = document.getElementById("coverage-wrap");
+    const empty = document.getElementById("coverage-empty");
+
+    if (templates.length === 0) {
+        wrap.hidden = true;
+        empty.hidden = false;
+        return;
+    }
+    empty.hidden = true;
+    wrap.hidden = false;
+
+    const requirements = (await fetchJson("/api/coverage-requirements"))
+        .filter((r) => r.venueId === venueId && r.position === null);
+    renderCoverageTable(templates, requirements, venueId);
+}
+
+function renderCoverageTable(templates, requirements, venueId) {
+    const body = document.getElementById("coverage-table-body");
+    body.innerHTML = "";
+
+    templates.forEach((template) => {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = template.name;
+        row.appendChild(nameCell);
+
+        DAYS_OF_WEEK.forEach((dayOfWeek) => {
+            const cell = document.createElement("td");
+            const existing = requirements.find(
+                (r) => r.shiftTemplateId === template.id && r.dayOfWeek === dayOfWeek);
+
+            const input = document.createElement("input");
+            input.type = "number";
+            input.min = "0";
+            input.className = "coverage-input";
+            input.value = existing ? existing.requiredCount : "";
+            input.dataset.requirementId = existing ? existing.id : "";
+
+            input.addEventListener("change", async () => {
+                await saveCoverageCell(input, template.id, dayOfWeek, venueId);
+            });
+
+            cell.appendChild(input);
+            row.appendChild(cell);
+        });
+
+        body.appendChild(row);
+    });
+}
+
+async function saveCoverageCell(input, shiftTemplateId, dayOfWeek, venueId) {
+    const requirementId = input.dataset.requirementId || null;
+    const count = parseInt(input.value, 10);
+
+    try {
+        if ((isNaN(count) || count <= 0)) {
+            if (requirementId) {
+                await fetchJson(`/api/coverage-requirements/${requirementId}`, { method: "DELETE" });
+                input.dataset.requirementId = "";
+            }
+            input.value = "";
+            setStatusMessage("Cobertura eliminada.", false);
+            return;
+        }
+
+        const body = { venueId, dayOfWeek, shiftTemplateId, requiredCount: count, position: null };
+        if (requirementId) {
+            await fetchJson(`/api/coverage-requirements/${requirementId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            setStatusMessage("Cobertura actualizada.", false);
+        } else {
+            const created = await fetchJson("/api/coverage-requirements", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            input.dataset.requirementId = created.id;
+            setStatusMessage("Cobertura guardada.", false);
+        }
+    } catch (error) {
+        setStatusMessage(error.message, true);
+    }
+}
+
 async function loadVenueAndShifts(venueId) {
     setStatusMessage(null);
     await loadVenue(venueId);
-    await loadShiftTemplates(venueId);
+    await loadShiftTemplatesAndCoverage(venueId);
 }
 
 function logout() {
@@ -176,6 +291,30 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(body)
             });
             setStatusMessage("Horario del local actualizado.", false);
+        } catch (error) {
+            setStatusMessage(error.message, true);
+        }
+    });
+
+    document.getElementById("create-shift-template-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const nameInput = document.getElementById("new-shift-name-input");
+        const startInput = document.getElementById("new-shift-start-input");
+        const endInput = document.getElementById("new-shift-end-input");
+        const body = {
+            name: nameInput.value,
+            venueId: currentVenueId,
+            segments: [{ startTime: startInput.value, endTime: endInput.value }]
+        };
+        try {
+            await fetchJson("/api/shift-templates", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            setStatusMessage(`Franja "${nameInput.value}" creada.`, false);
+            event.target.reset();
+            await loadShiftTemplatesAndCoverage(currentVenueId);
         } catch (error) {
             setStatusMessage(error.message, true);
         }

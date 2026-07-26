@@ -56,8 +56,46 @@
 
         <section class="settings-section">
             <h2>Turnos</h2>
-            <p id="shift-templates-empty" hidden>Carga primero un venue para ver sus turnos.</p>
+            <form id="create-shift-template-form" class="generate-form">
+                <label>
+                    Nombre de la franja
+                    <input type="text" id="new-shift-name-input" placeholder="Ej. Mañana" required>
+                </label>
+                <label>
+                    Inicio
+                    <input type="time" id="new-shift-start-input" required>
+                </label>
+                <label>
+                    Fin
+                    <input type="time" id="new-shift-end-input" required>
+                </label>
+                <button type="submit">Crear franja</button>
+            </form>
+            <p id="shift-templates-empty" hidden>Todavía no hay franjas horarias creadas para este local.</p>
             <div id="shift-templates-list"></div>
+        </section>
+
+        <section class="settings-section">
+            <h2>Cobertura mínima</h2>
+            <p>Personas necesarias en cada franja horaria, por día de la semana.</p>
+            <p id="coverage-empty" hidden>Crea primero alguna franja horaria para poder fijar su cobertura.</p>
+            <div id="coverage-wrap" class="schedule-wrapper" hidden>
+                <table class="schedule-table" id="coverage-table">
+                    <thead>
+                        <tr>
+                            <th>Franja</th>
+                            <th>Lun</th>
+                            <th>Mar</th>
+                            <th>Mié</th>
+                            <th>Jue</th>
+                            <th>Vie</th>
+                            <th>Sáb</th>
+                            <th>Dom</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coverage-table-body"></tbody>
+                </table>
+            </div>
         </section>
     </main>
 
