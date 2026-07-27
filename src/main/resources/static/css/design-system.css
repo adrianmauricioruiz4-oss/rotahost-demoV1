@@ -347,8 +347,9 @@ p { margin: 0; }
   display: flex; flex-direction: column; gap: var(--s-2);
   z-index: 10;
 }
-/* El contenido deja hueco al menú en vez de quedar debajo. */
-body { padding-left: 236px; }
+/* El contenido deja hueco al menú en vez de quedar debajo. Solo en las páginas que llevan
+   menú: la de acceso no lo tiene y se quedaba desplazada contra el borde derecho. */
+body:has(.sidebar) { padding-left: 236px; }
 
 .sidebar .brand {
   font-size: 15px; font-weight: 600;
@@ -403,7 +404,7 @@ body { padding-left: 236px; }
     border-right: none; border-bottom: 1px solid var(--line);
     overflow-x: auto;
   }
-  body { padding-left: 0; }
+  body:has(.sidebar) { padding-left: 0; }
   .sidebar .venue-name { display: none; }
   .sidebar nav { flex-direction: row; }
   .nav-item { white-space: nowrap; }
