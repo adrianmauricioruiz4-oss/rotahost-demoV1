@@ -2,6 +2,8 @@ package com.generador.horarios.proyecto.timeclock;
 
 import com.generador.horarios.proyecto.employee.Employee;
 import com.generador.horarios.proyecto.employee.EmployeeRepository;
+import com.generador.horarios.proyecto.timeclock.dto.TimeClockCorrectionRequest;
+import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryCreateRequest;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryResponse;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockStatusResponse;
 import java.time.LocalDate;
@@ -95,6 +97,59 @@ public class TimeClockService {
                 .stream().map(this::toResponse).toList();
     }
 
+    /**
+     * Corrige la hora de un fichaje existente. No sustituye el registro: guarda la hora
+     * original, quién lo cambió, cuándo y por qué.
+     *
+     * @param manager encargado que hace el cambio; solo puede tocar fichajes de su propio local
+     * @throws ResponseStatusException 404 si no existe, 403 si es de otro local
+     */
+    @Transactional
+    public TimeClockEntryResponse correct(Long entryId, TimeClockCorrectionRequest request, Employee manager) {
+        TimeClockEntry entry = timeClockEntryRepository.findById(entryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichaje no encontrado: " + entryId));
+        requireSameVenue(entry.getEmployee(), manager);
+
+        entry.correctTo(request.timestamp(), manager, request.reason(), LocalDateTime.now());
+        return toResponse(entry);
+    }
+
+    /**
+     * Anota un fichaje que falta, en nombre de un empleado. Es lo que resuelve la jornada que
+     * quedó abierta: no hay nada que corregir, falta la salida que nadie fichó.
+     *
+     * @param manager encargado que lo anota; solo sobre empleados de su propio local
+     * @throws ResponseStatusException 404 si el empleado no existe, 403 si es de otro local,
+     *                                 400 si el tipo de fichaje no es válido
+     */
+    @Transactional
+    public TimeClockEntryResponse addOnBehalf(TimeClockEntryCreateRequest request, Employee manager) {
+        Employee employee = employeeRepository.findById(request.employeeId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Empleado no encontrado: " + request.employeeId()));
+        requireSameVenue(employee, manager);
+
+        PunchType type;
+        try {
+            type = PunchType.valueOf(request.type());
+        } catch (IllegalArgumentException notAPunchType) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tipo de fichaje desconocido: " + request.type());
+        }
+
+        TimeClockEntry entry = new TimeClockEntry(employee, type, request.timestamp(), true);
+        entry.annotate(manager, request.reason(), LocalDateTime.now());
+        return toResponse(timeClockEntryRepository.save(entry));
+    }
+
+    /** Multi-tenant: un encargado no toca fichajes de un local que no es el suyo. */
+    private void requireSameVenue(Employee target, Employee manager) {
+        Long targetVenueId = target.getVenue() == null ? null : target.getVenue().getId();
+        Long managerVenueId = manager.getVenue() == null ? null : manager.getVenue().getId();
+        if (targetVenueId == null || !targetVenueId.equals(managerVenueId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ese fichaje no es de tu local.");
+        }
+    }
+
     /** Ficha la acción que toque según el último fichaje. */
     @Transactional
     public TimeClockEntryResponse punch(Long employeeId) {
@@ -186,6 +241,14 @@ public class TimeClockService {
     }
 
     private TimeClockEntryResponse toResponse(TimeClockEntry entry) {
-        return new TimeClockEntryResponse(entry.getId(), entry.getType().name(), entry.getTimestamp());
+        return new TimeClockEntryResponse(
+                entry.getId(),
+                entry.getType().name(),
+                entry.getTimestamp(),
+                entry.getOriginalTimestamp(),
+                entry.getCorrectedAt(),
+                entry.getCorrectedBy() == null ? null : entry.getCorrectedBy().getName(),
+                entry.getCorrectionReason(),
+                entry.isAddedByManager());
     }
 }

@@ -66,8 +66,11 @@ public class SecurityConfig {
                         .hasRole("MANAGER")
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**",
-                                "/api/venues/**", "/api/schedules/*/assignments")
+                                "/api/venues/**", "/api/schedules/*/assignments", "/api/timeclock/entries/**")
                         .hasRole("MANAGER")
+                        // Corregir o anotar el fichaje de otro es cosa del encargado. Fichar el
+                        // propio (POST /api/timeclock/punch) sigue abierto a cualquier sesión.
+                        .requestMatchers(HttpMethod.POST, "/api/timeclock/entries").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**")
                         .hasRole("MANAGER")

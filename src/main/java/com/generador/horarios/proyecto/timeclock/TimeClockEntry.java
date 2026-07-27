@@ -37,6 +37,24 @@ public class TimeClockEntry {
     @Column(name = "occurred_at", nullable = false)
     private LocalDateTime timestamp;
 
+    /** Hora que tenía antes de la primera corrección. Null si nadie lo ha tocado. */
+    @Column(name = "original_occurred_at")
+    private LocalDateTime originalTimestamp;
+
+    @Column(name = "corrected_at")
+    private LocalDateTime correctedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "corrected_by_id")
+    private Employee correctedBy;
+
+    @Column(name = "correction_reason", length = 500)
+    private String correctionReason;
+
+    /** true si lo anotó el encargado en nombre del empleado, no el empleado al fichar. */
+    @Column(name = "added_by_manager", nullable = false)
+    private boolean addedByManager;
+
     protected TimeClockEntry() {
     }
 
@@ -44,6 +62,59 @@ public class TimeClockEntry {
         this.employee = employee;
         this.type = type;
         this.timestamp = timestamp;
+    }
+
+    public TimeClockEntry(Employee employee, PunchType type, LocalDateTime timestamp, boolean addedByManager) {
+        this(employee, type, timestamp);
+        this.addedByManager = addedByManager;
+    }
+
+    /**
+     * Cambia la hora dejando rastro. La hora original se guarda solo la primera vez: si el
+     * encargado corrige dos veces, lo que interesa conservar es lo que fichó el empleado, no
+     * el paso intermedio.
+     *
+     * @param manager encargado que hace el cambio
+     * @param reason  motivo, obligatorio: es lo que se enseña si alguien pregunta
+     */
+    public void correctTo(LocalDateTime newTimestamp, Employee manager, String reason, LocalDateTime now) {
+        if (originalTimestamp == null) {
+            originalTimestamp = timestamp;
+        }
+        timestamp = newTimestamp;
+        correctedBy = manager;
+        correctionReason = reason;
+        correctedAt = now;
+    }
+
+    /**
+     * Deja constancia de quién anotó este fichaje y por qué, sin tocar la hora. Para los que
+     * nace ya puestos a mano: no hay hora original que conservar porque no la hubo nunca.
+     */
+    public void annotate(Employee manager, String reason, LocalDateTime now) {
+        correctedBy = manager;
+        correctionReason = reason;
+        correctedAt = now;
+    }
+
+    public LocalDateTime getOriginalTimestamp() {
+        return originalTimestamp;
+    }
+
+    public LocalDateTime getCorrectedAt() {
+        return correctedAt;
+    }
+
+    public Employee getCorrectedBy() {
+        return correctedBy;
+    }
+
+    public String getCorrectionReason() {
+        return correctionReason;
+    }
+
+    public boolean isAddedByManager() {
+        return addedByManager;
     }
 
     public Long getId() {
