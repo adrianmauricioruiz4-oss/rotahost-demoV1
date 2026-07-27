@@ -241,7 +241,8 @@ Marca las casillas al completar. Una tarea, un commit.
 ### Fase 9 — Acceso empleados: intercambios y fichaje
 - [ ] T9.1 — Aceptar/rechazar propuestas de intercambio desde la vista de empleado
 - [ ] T9.2 — Notificaciones básicas in-app al publicar cuadrante o al recibir una propuesta
-- [x] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración)
+- [x] T9.3 — Fichaje de entrada/salida (registro simple, separado de las funciones de administración).
+  Ampliado en la Fase 11: pausas, cómputo de jornada, pantalla propia y consola del encargado
 - [ ] T9.4 — Comparativa horas planificadas vs. horas fichadas
 
 ### Fase 10 — Configuración y cuenta
@@ -250,11 +251,64 @@ Marca las casillas al completar. Una tarea, un commit.
 - [ ] T10.3 — Exportación de datos
 - [ ] T10.4 — Historial de cambios (auditoría básica)
 
+### Fase 11 — Rediseño, fichaje completo y avisos (ronda de 2026-07-27)
+- [x] T11.1 — Instalar `design-system.css` + `components.html`, barra de navegación horizontal,
+  y renombrar el producto a **RotaTeam**
+- [x] T11.2 — Migrar `login.html` al sistema de diseño (avisos en línea en vez de toasts)
+- [x] T11.3 — Migrar `dashboard.html`
+- [x] T11.4 — Migrar `employees.html` (tabla + ficha en modal)
+- [x] T11.5 — Migrar `settings.html`
+- [x] T11.6 — Migrar `employee.html` (una fila por día, no siete columnas)
+- [x] T11.7 — Migrar el cuadrante (`index.html`) y retirar `tokens.css`, `styles.css` y `toast.js`
+- [x] T11.8 — `BREAK_START`/`BREAK_END` en `PunchType`, máquina de 4 estados y cómputo de jornada
+  efectiva (`WorkedTime`) con margen de pausa configurable por venue
+- [x] T11.9 — Pantalla de fichaje del empleado (`fichar.html`), tres estados + línea de tiempo
+- [x] T11.10 — Corrección de fichajes por el encargado: `PUT /api/timeclock/entries/{id}` y
+  `POST /api/timeclock/entries`, con motivo obligatorio y rastro de auditoría
+- [x] T11.11 — Consola de fichaje del encargado (`fichajes.html`) + `GET /api/timeclock/overview`
+- [x] T11.12 — Botón "Cambios de última hora" sobre cuadrante `PUBLISHED` (flag `lastMinute`)
+- [x] T11.13 — `spring-boot-starter-mail` + `ScheduleNotificationService` + `POST /api/schedules/{id}/notify`
+- [x] T11.14 — Botón "Compartir en WhatsApp" (enlace `wa.me`)
+- [x] T11.15 — Actualizar este roadmap con la ronda y sus decisiones
+
+**Decisiones de esta ronda (no volver a discutirlas sin motivo nuevo):**
+
+1. **Los turnos del cuadrante NO se distinguen por color.** `design-system.css` no trae paleta
+   categórica y `DESIGN.md` prohíbe colores fuera de los tokens. Cada celda dice en texto el
+   nombre del turno y su horario. Los avatares de colores se retiraron por lo mismo.
+2. **Publicar no envía nada.** Ni publicar ni un cambio de última hora escriben al equipo:
+   avisar es un botón aparte con su confirmación. Copiloto, no piloto automático.
+3. **El envío de correo viene apagado de fábrica** (`MAIL_ENABLED=false`). Sin activarlo, el
+   aviso se escribe en el log y se le dice al encargado que no ha salido. Es para que un entorno
+   de pruebas no pueda escribir a la plantilla real por descuido. Credenciales solo por
+   variables de entorno, nunca en `application.yml` (ver `.env.example`).
+4. **Las pausas se registran siempre y no se le restan al trabajador** mientras no excedan el
+   margen que reconoce el local (`Venue.breakAllowanceMinutes`, editable en configuración). Solo
+   el exceso sale del cómputo, y el margen se aplica por jornada, no por semana. El valor de
+   arranque son los 15 min del art. 34.4 del Estatuto de los Trabajadores para jornadas
+   continuadas de más de seis horas: **es un punto de partida, no una decisión legal para ningún
+   local concreto**; cada convenio manda sobre él.
+5. **Los fichajes no se borran nunca.** Se pueden corregir y se pueden añadir los que falten,
+   pero el registro conserva la hora original, quién la cambió, cuándo y por qué. El registro
+   horario es obligatorio y cada retoque tiene que ser justificable ante una inspección.
+6. **WhatsApp: enlace `wa.me` y punto.** Ninguna API oficial permite que una aplicación publique
+   en un grupo de WhatsApp normal. Las otras dos vías quedan en backlog, con su motivo.
+
 ### Backlog (NO empezar sin pedirlo)
 - LLM para parsear preferencias en lenguaje natural ("el finde del 20 no puedo, tengo boda")
 - LLM para explicar en castellano por qué a Juan le tocó el domingo
-- Notificaciones por WhatsApp/email al publicar (T9.2 cubre solo in-app)
-- Código PIN / QR / geolocalización para el fichaje (T9.3 cubre solo el registro simple)
+- Notificaciones in-app al publicar (T9.2). El correo ya está hecho (T11.13) y WhatsApp se
+  resolvió con el enlace `wa.me` (T11.14)
+- **WhatsApp automático al grupo, vía librería no oficial** (`whatsapp-web.js`, `Baileys`):
+  técnicamente publica sin intervención, pero incumple los términos de servicio de WhatsApp y
+  arriesga el bloqueo del número del negocio. No hacerlo sin que el dueño del producto lo pida
+  sabiendo el riesgo
+- **WhatsApp Business Cloud API de pago**, con plantillas aprobadas por Meta y envío individual
+  a cada empleado (nunca al grupo). Viable, pero es una integración de pago con revisión previa,
+  no una tarea de una sesión
+- Código PIN / QR / geolocalización para el fichaje. T11.9 mantiene el acceso invitado por lista
+  de nombres; el PIN toca la autenticación (columna en `Employee`, hash, alta y reseteo) y
+  merece su propia tarea de seguridad
 - Gestión de festivos por CCAA (calendario oficial automático; T6.1 cubre solo festivos manuales)
 - Una cuenta gestionando varios venues (cadenas/multi-local). T4.2 decidió deliberadamente una
   cuenta = un venue para V1 (encaja con el Employee-con-credenciales de T4.1 y con el público

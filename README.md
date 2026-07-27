@@ -54,10 +54,21 @@ host.
 - **Variables de entorno** que acepta la app (ver `application.yml`): `DB_HOST`, `DB_PORT`,
   `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`. `SPRING_PROFILES_ACTIVE` debe ser distinto de `dev`
   para que use MySQL en vez de H2.
+- **Avisos por correo**: vienen desactivados. Sin `MAIL_ENABLED=true` la aplicación no envía
+  nada; anota el aviso en el log y se lo dice al encargado en pantalla. Para activarlos:
+  `MAIL_ENABLED`, `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME` y `SMTP_PASSWORD`, todas
+  en el `.env` (ver `.env.example`). Con Gmail hace falta una *contraseña de aplicación*, no la
+  de la cuenta. Ninguna credencial ni dirección real debe escribirse en `application.yml`: ese
+  fichero sí va al repositorio.
 
 ## Estructura del proyecto
 
 Package-by-feature: `employee`, `preference`, `shift`, `schedule` (con el motor de generación en
-`schedule/engine`, sin dependencias de Spring), `venue`, `shared` (config, seguridad, manejo de
-errores). El contrato completo de desarrollo — modelo de dominio, restricciones duras/blandas,
-algoritmo de generación y roadmap — está en [`CLAUDE.md`](CLAUDE.md).
+`schedule/engine`, sin dependencias de Spring), `venue`, `timeclock` (fichaje, con el cómputo de
+jornada en `WorkedTime`, también Java puro), `shared` (config, seguridad, manejo de errores). El
+contrato completo de desarrollo — modelo de dominio, restricciones duras/blandas, algoritmo de
+generación y roadmap — está en [`CLAUDE.md`](CLAUDE.md).
+
+El frontend es HTML + CSS + JavaScript vanilla en `src/main/resources/static`, sobre una única
+hoja de estilos, `css/design-system.css`. `components.html` es la referencia viva de todas las
+clases disponibles: antes de inventar una clase nueva, mírala ahí.
