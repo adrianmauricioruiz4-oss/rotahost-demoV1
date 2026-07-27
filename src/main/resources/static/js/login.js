@@ -11,7 +11,7 @@ function setStatusMessage(message, isError) {
         return;
     }
     el.textContent = message;
-    el.className = "status-message " + (isError ? "error" : "success");
+    el.className = "notice " + (isError ? "notice--alert" : "notice--ok");
     el.hidden = false;
 }
 

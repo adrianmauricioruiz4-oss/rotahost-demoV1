@@ -10,7 +10,7 @@
         if (!container) {
             container = document.createElement("div");
             container.id = "toasts";
-            container.className = "toasts";
+            container.className = "toast-stack";
             document.body.appendChild(container);
         }
         return container;
@@ -26,6 +26,7 @@
         const container = ensureContainer();
         const toast = document.createElement("div");
         toast.className = "toast" + (type === "warn" ? " warn" : "");
+        toast.setAttribute("role", "status");
         toast.appendChild(iconElement(type));
 
         const text = document.createElement("span");

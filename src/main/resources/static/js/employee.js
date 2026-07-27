@@ -56,7 +56,7 @@ function setStatusMessage(message, isError) {
         return;
     }
     el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
+    el.className = "notice " + (isError ? "notice--alert" : "notice--ok");
     el.hidden = false;
 }
 
@@ -145,24 +145,28 @@ function renderMyWeek(employee, days, assignmentsByDate, status) {
     heading.hidden = false;
     heading.textContent = status ? `${employee.name} — estado: ${status}` : `${employee.name} — cuadrante no generado todavía`;
 
-    const headRow = document.getElementById("week-head-row");
-    const bodyRow = document.getElementById("week-body-row");
-    headRow.innerHTML = "";
-    bodyRow.innerHTML = "";
+    const body = document.getElementById("week-body-row");
+    body.innerHTML = "";
 
     days.forEach((day) => {
-        const th = document.createElement("th");
-        th.textContent = day.label;
-        headRow.appendChild(th);
+        const row = document.createElement("tr");
 
-        const td = document.createElement("td");
+        const dayCell = document.createElement("td");
+        dayCell.className = "cell-title";
+        dayCell.textContent = day.label;
+        row.appendChild(dayCell);
+
+        const shiftCell = document.createElement("td");
         if (!status) {
-            td.textContent = "—";
+            shiftCell.className = "cell-empty";
+            shiftCell.textContent = "—";
         } else {
             const shiftTemplateId = assignmentsByDate.get(day.date);
-            td.textContent = shiftTemplateId ? currentShiftTemplateLabelsById.get(shiftTemplateId) : "Libre";
+            shiftCell.textContent = shiftTemplateId ? currentShiftTemplateLabelsById.get(shiftTemplateId) : "Libre";
         }
-        bodyRow.appendChild(td);
+        row.appendChild(shiftCell);
+
+        body.appendChild(row);
     });
 }
 
@@ -188,27 +192,33 @@ function renderPreferences(preferences) {
     list.innerHTML = "";
 
     if (preferences.length === 0) {
-        const empty = document.createElement("li");
-        empty.textContent = "Todavía no tienes preferencias guardadas.";
-        list.appendChild(empty);
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.className = "cell-empty";
+        cell.colSpan = 2;
+        cell.textContent = "Todavía no tienes preferencias guardadas.";
+        row.appendChild(cell);
+        list.appendChild(row);
         return;
     }
 
     preferences.forEach((preference) => {
-        const item = document.createElement("li");
+        const row = document.createElement("tr");
 
-        const text = document.createElement("span");
-        text.textContent = describePreference(preference);
-        item.appendChild(text);
+        const textCell = document.createElement("td");
+        textCell.textContent = describePreference(preference);
+        row.appendChild(textCell);
 
+        const actionCell = document.createElement("td");
+        actionCell.className = "right";
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
-        deleteButton.className = "preference-delete-button";
+        deleteButton.className = "btn btn--danger btn--sm";
         deleteButton.textContent = "Eliminar";
         deleteButton.addEventListener("click", async () => {
             try {
                 await fetchJson(`/api/preferences/${preference.id}`, { method: "DELETE" });
-                item.remove();
+                row.remove();
                 if (list.children.length === 0) {
                     renderPreferences([]);
                 }
@@ -216,9 +226,10 @@ function renderPreferences(preferences) {
                 setStatusMessage(error.message, true);
             }
         });
-        item.appendChild(deleteButton);
+        actionCell.appendChild(deleteButton);
+        row.appendChild(actionCell);
 
-        list.appendChild(item);
+        list.appendChild(row);
     });
 }
 
@@ -260,7 +271,14 @@ async function loadTimeClockStatus() {
 function applyTimeClockStatus(data, button, status) {
     const isClockIn = data.nextAction === "CLOCK_IN";
     button.textContent = isClockIn ? "Fichar entrada" : "Fichar salida";
-    button.className = isClockIn ? "btn btn-primary" : "btn btn-teal";
+
+    const block = document.getElementById("timeclock-block");
+    const mark = document.getElementById("timeclock-mark");
+    const label = document.getElementById("timeclock-status-label");
+    block.className = "status-block " + (isClockIn ? "status-block--out" : "status-block--working");
+    mark.className = "mark " + (isClockIn ? "mark--ring" : "mark--dot");
+    label.textContent = isClockIn ? "Fuera de turno" : "Trabajando";
+
     if (data.lastEntry) {
         const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
             weekday: "short", hour: "2-digit", minute: "2-digit"
@@ -384,30 +402,6 @@ document.addEventListener("DOMContentLoaded", () => {
         isGuestUser = !!me.guest;
         const roleLabel = isGuestUser ? "Invitado" : (me.role === "MANAGER" ? "Encargado" : "Empleado");
         document.getElementById("whoami-label").textContent = `${me.name} · ${roleLabel}`;
-
-        // Un empleado o invitado nunca llega al cuadrante (index.html les rebota de vuelta aquí
-        // porque no son MANAGER), así que "Volver al cuadrante" no tiene sentido para ellos: el
-        // único sitio donde pueden cerrar sesión es este botón.
-        if (!isManagerUser) {
-            const link = document.getElementById("back-or-logout-link");
-            document.getElementById("back-or-logout-label").textContent = "Cerrar sesión";
-            link.removeAttribute("href");
-            link.style.cursor = "pointer";
-            link.setAttribute("role", "button");
-            link.setAttribute("tabindex", "0");
-            link.addEventListener("click", (event) => {
-                event.preventDefault();
-                fetchJson("/logout", { method: "POST" })
-                    .catch(() => {})
-                    .finally(() => { window.location.href = "/"; });
-            });
-            link.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    link.click();
-                }
-            });
-        }
 
         await populateEmployeeSelect();
         return loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));

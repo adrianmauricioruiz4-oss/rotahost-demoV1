@@ -50,8 +50,24 @@ function setStatusMessage(message, isError) {
         return;
     }
     el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
+    el.className = "notice " + (isError ? "notice--alert" : "notice--ok");
     el.hidden = false;
+}
+
+/** label + input, con la clase .field del sistema de diseño. */
+function buildField(labelText, input) {
+    const field = document.createElement("div");
+    field.className = "field";
+    const label = document.createElement("label");
+    label.className = "label";
+    const inputId = `f-${labelText.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Math.random().toString(36).slice(2, 7)}`;
+    label.htmlFor = inputId;
+    label.textContent = labelText;
+    input.id = inputId;
+    input.classList.add("input");
+    field.appendChild(label);
+    field.appendChild(input);
+    return field;
 }
 
 async function loadVenue(venueId) {
@@ -87,48 +103,35 @@ function renderShiftTemplates(templates, venueId) {
 
 function buildShiftTemplateCard(template, venueId) {
     const card = document.createElement("form");
-    card.className = "shift-template-card generate-form";
+    card.className = "surface stack-4";
+    card.style.maxWidth = "480px";
 
-    const nameLabel = document.createElement("label");
-    nameLabel.textContent = "Nombre";
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.required = true;
     nameInput.value = template.name;
-    nameLabel.appendChild(nameInput);
-    card.appendChild(nameLabel);
+    card.appendChild(buildField("Nombre", nameInput));
 
     const segmentInputs = template.segments.map((segment, index) => {
-        const startLabel = document.createElement("label");
-        startLabel.textContent = `Tramo ${index + 1} — inicio`;
         const startInput = document.createElement("input");
         startInput.type = "time";
         startInput.required = true;
         startInput.value = toTimeInputValue(segment.startTime);
-        startLabel.appendChild(startInput);
+        card.appendChild(buildField(`Tramo ${index + 1} — inicio`, startInput));
 
-        const endLabel = document.createElement("label");
-        endLabel.textContent = `Tramo ${index + 1} — fin`;
         const endInput = document.createElement("input");
         endInput.type = "time";
         endInput.required = true;
         endInput.value = toTimeInputValue(segment.endTime);
-        endLabel.appendChild(endInput);
+        card.appendChild(buildField(`Tramo ${index + 1} — fin`, endInput));
 
-        card.appendChild(startLabel);
-        card.appendChild(endLabel);
         return { startInput, endInput };
     });
-
-    const saveButton = document.createElement("button");
-    saveButton.type = "submit";
-    saveButton.textContent = "Guardar";
-    card.appendChild(saveButton);
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.textContent = "Eliminar franja";
-    deleteButton.className = "preference-delete-button";
+    deleteButton.className = "btn btn--danger";
     deleteButton.addEventListener("click", async () => {
         if (!window.confirm(`¿Eliminar la franja "${template.name}"? Se quitará también su cobertura mínima.`)) {
             return;
@@ -141,7 +144,17 @@ function buildShiftTemplateCard(template, venueId) {
             setStatusMessage(error.message, true);
         }
     });
-    card.appendChild(deleteButton);
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "submit";
+    saveButton.className = "btn btn--primary";
+    saveButton.textContent = "Guardar";
+
+    const actions = document.createElement("div");
+    actions.className = "row-end";
+    actions.appendChild(deleteButton);
+    actions.appendChild(saveButton);
+    card.appendChild(actions);
 
     card.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -211,7 +224,7 @@ function renderCoverageTable(templates, requirements, venueId) {
             const input = document.createElement("input");
             input.type = "number";
             input.min = "0";
-            input.className = "coverage-input";
+            input.className = "input input--cell";
             input.value = existing ? existing.requiredCount : "";
             input.dataset.requirementId = existing ? existing.id : "";
 

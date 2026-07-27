@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jornada — referencia de componentes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/design-system.css">
+<style>
+  .demo { margin-bottom: 56px; }
+  .demo > h3 { margin-bottom: 6px; }
+  .demo > .text-caption { margin-bottom: 20px; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .sw { border-radius: var(--r-sm); padding: 14px; font-size: 13px; border: 1px solid var(--line); }
+  .inline-set { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .phone-demo { max-width: 340px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">Jornada</span>
+  <nav>
+    <a href="#" aria-current="page">Componentes</a>
+    <a href="#">Tokens</a>
+  </nav>
+</div>
+
+<main class="page">
+
+  <h1>Referencia de componentes</h1>
+  <p class="text-lead" style="margin-top:10px">Todas las clases del sistema. No inventar clases nuevas fuera de esto.</p>
+
+  <hr style="border:none;border-top:1px solid var(--line);margin:36px 0">
+
+  <!-- COLOR -->
+  <section class="demo">
+    <h3>Tokens de color</h3>
+    <p class="text-caption">Los tres grises de texto superan 4.5:1 sobre blanco.</p>
+    <div class="swatches">
+      <div class="sw" style="background:var(--canvas)">--canvas</div>
+      <div class="sw" style="background:var(--white)">--white</div>
+      <div class="sw" style="background:var(--soft)">--soft</div>
+      <div class="sw" style="background:var(--ink);color:#fff">--ink</div>
+      <div class="sw" style="background:var(--ink-2);color:#fff">--ink-2</div>
+      <div class="sw" style="background:var(--ink-3);color:#fff">--ink-3</div>
+      <div class="sw" style="background:var(--ok-soft);color:var(--ok)">--ok</div>
+      <div class="sw" style="background:var(--warn-soft);color:var(--warn)">--warn</div>
+      <div class="sw" style="background:var(--alert-soft);color:var(--alert)">--alert</div>
+    </div>
+  </section>
+
+  <!-- TIPOGRAFÍA -->
+  <section class="demo">
+    <h3>Tipografía</h3>
+    <p class="text-caption">Inter en cuatro pesos. Nada por debajo de 14px.</p>
+    <div class="surface stack-3">
+      <h1>Título de página</h1>
+      <h2>Título de sección</h2>
+      <h3>Subtítulo</h3>
+      <p class="text-lead">Texto destacado para introducciones</p>
+      <p class="text-body">Texto de cuerpo estándar</p>
+      <p class="text-secondary">Texto secundario</p>
+      <p class="text-caption">Pie de campo o nota</p>
+      <p class="figure">4h 43m</p>
+      <p class="figure-sm">31h 10m</p>
+    </div>
+  </section>
+
+  <!-- BOTONES -->
+  <section class="demo">
+    <h3>Botones</h3>
+    <p class="text-caption">Un solo botón primario por pantalla. Altura mínima 48px.</p>
+    <div class="surface stack-4">
+      <div class="inline-set">
+        <button class="btn btn--primary">Guardar cambios</button>
+        <button class="btn btn--secondary">Cancelar</button>
+        <button class="btn btn--danger">Corregir</button>
+        <button class="btn btn--quiet">Ver detalle</button>
+        <button class="btn btn--primary btn--sm">Acción pequeña</button>
+        <button class="btn btn--primary" disabled>Deshabilitado</button>
+      </div>
+      <div class="phone-demo">
+        <button class="btn btn--primary btn--hero">Fichar salida</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTADOS -->
+  <section class="demo">
+    <h3>Marcas y píldoras de estado</h3>
+    <p class="text-caption">Cada estado combina forma y color. Nunca solo color.</p>
+    <div class="surface stack-4">
+      <div class="inline-set">
+        <span class="pill pill--ok"><span class="mark mark--dot"></span>Trabajando</span>
+        <span class="pill pill--warn"><span class="mark mark--bars"></span>En pausa</span>
+        <span class="pill pill--off"><span class="mark mark--ring"></span>Fuera</span>
+        <button class="pill pill--alert">Corregir</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BLOQUE DE ESTADO -->
+  <section class="demo">
+    <h3>Bloque de estado del empleado</h3>
+    <p class="text-caption">Los tres estados de la máquina. Es el elemento principal de la PWA.</p>
+    <div class="grid-3">
+      <div class="status-block status-block--working">
+        <p class="status-line"><span class="mark mark--dot"></span>Trabajando</p>
+        <p class="figure" style="margin-top:16px">4h 43m</p>
+        <p class="text-secondary" style="margin-top:10px">Entraste a las 12:04</p>
+      </div>
+      <div class="status-block status-block--paused">
+        <p class="status-line"><span class="mark mark--bars"></span>En pausa</p>
+        <p class="figure" style="margin-top:16px">18m</p>
+        <p class="text-secondary" style="margin-top:10px">Pausa desde las 18:29</p>
+      </div>
+      <div class="status-block status-block--out">
+        <p class="status-line"><span class="mark mark--ring"></span>Fuera de turno</p>
+        <p class="figure" style="margin-top:16px">—</p>
+        <p class="text-secondary" style="margin-top:10px">Entras a las 20:00</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÉTRICAS -->
+  <section class="demo">
+    <h3>Métricas</h3>
+    <p class="text-caption">Para cabeceras de panel. Máximo tres por fila.</p>
+    <div class="grid-3">
+      <div class="tile tile-ok"><div class="tile-n">5</div><div class="tile-l">Trabajando</div></div>
+      <div class="tile tile-warn"><div class="tile-n">1</div><div class="tile-l">En pausa</div></div>
+      <div class="tile"><div class="tile-n">2</div><div class="tile-l">Sin fichar</div></div>
+    </div>
+  </section>
+
+  <!-- FORMULARIOS -->
+  <section class="demo">
+    <h3>Formularios</h3>
+    <p class="text-caption">Para el alta de empleados y las correcciones del admin.</p>
+    <div class="surface page-narrow">
+      <div class="field">
+        <label class="label" for="f1">Nombre completo</label>
+        <input class="input" id="f1" type="text" placeholder="Elena Ruiz">
+      </div>
+      <div class="field">
+        <label class="label" for="f2">Horas semanales</label>
+        <input class="input" id="f2" type="number" value="40">
+        <p class="hint">Según el contrato vigente</p>
+      </div>
+      <div class="field">
+        <label class="label" for="f3">Tipo de contrato</label>
+        <select class="select" id="f3">
+          <option>Indefinido</option>
+          <option>Temporal</option>
+          <option>Fijo discontinuo</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="label" for="f4">NIF</label>
+        <input class="input" id="f4" type="text" value="12345678Z" aria-invalid="true">
+        <p class="error-text">Ya existe un empleado con este NIF</p>
+      </div>
+      <div class="field">
+        <label class="label" for="f5">Motivo de la corrección</label>
+        <textarea class="textarea" id="f5" placeholder="El empleado olvidó fichar la salida"></textarea>
+      </div>
+      <div class="row-end" style="margin-top:26px">
+        <button class="btn btn--secondary">Cancelar</button>
+        <button class="btn btn--primary">Guardar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PINPAD -->
+  <section class="demo">
+    <h3>Acceso con PIN</h3>
+    <p class="text-caption">Login del empleado. Nunca contraseña de texto en la PWA.</p>
+    <div class="surface phone-demo">
+      <p class="text-secondary" style="text-align:center;margin-bottom:20px">Introduce tu PIN</p>
+      <div class="pin-display" style="margin-bottom:28px">
+        <span class="pin-dot pin-dot--filled"></span>
+        <span class="pin-dot pin-dot--filled"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+      <div class="pinpad">
+        <button>1</button><button>2</button><button>3</button>
+        <button>4</button><button>5</button><button>6</button>
+        <button>7</button><button>8</button><button>9</button>
+        <button style="visibility:hidden"></button><button>0</button><button aria-label="Borrar">←</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- AVISOS -->
+  <section class="demo">
+    <h3>Avisos</h3>
+    <p class="text-caption">Para incidencias y confirmaciones.</p>
+    <div class="stack-3">
+      <div class="notice notice--alert" role="status">
+        <span class="mark mark--dot"></span>
+        Jorge Pardo no cerró su jornada de ayer
+        <button class="btn btn--danger btn--sm notice-action">Corregir</button>
+      </div>
+      <div class="notice notice--warn">
+        <span class="mark mark--bars"></span>
+        Sara López lleva 9h 12m sin fichar salida
+      </div>
+      <div class="notice notice--ok">
+        <span class="mark mark--dot"></span>
+        Informe de junio exportado correctamente
+      </div>
+      <div class="notice notice--info">
+        <span class="mark mark--ring"></span>
+        Las pausas no computan como tiempo efectivo en esta empresa
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLA -->
+  <section class="demo">
+    <h3>Tabla</h3>
+    <p class="text-caption">Cabecera una sola vez. En móvil colapsa a bloques.</p>
+    <div class="surface">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Empleado</th>
+            <th scope="col">Entrada</th>
+            <th scope="col">Acumulado hoy</th>
+            <th scope="col" class="right">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="cell-title">Elena Ruiz</div><div class="cell-sub">Sala</div></td>
+            <td>12:04</td>
+            <td>4h 43m</td>
+            <td class="right"><span class="pill pill--ok"><span class="mark mark--dot"></span>Trabajando</span></td>
+          </tr>
+          <tr>
+            <td><div class="cell-title">Marco Gil</div><div class="cell-sub">Cocina · pausa desde 18:20</div></td>
+            <td>11:30</td>
+            <td>6h 22m</td>
+            <td class="right"><span class="pill pill--warn"><span class="mark mark--bars"></span>En pausa</span></td>
+          </tr>
+          <tr>
+            <td><div class="cell-title">Jorge Pardo</div><div class="cell-sub">Jornada de ayer sin cerrar</div></td>
+            <td class="cell-empty">—</td>
+            <td class="cell-empty">—</td>
+            <td class="right"><button class="pill pill--alert">Corregir</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="demo">
+    <h3>Línea de tiempo</h3>
+    <p class="text-caption">Fichajes del día. Cumple el derecho de acceso del trabajador.</p>
+    <div class="surface phone-demo">
+      <div class="timeline" style="border-top:none;padding-top:0">
+        <h3>Hoy</h3>
+        <div class="timeline-item"><span class="tl-time">12:04</span><span class="tl-event">Entrada</span></div>
+        <div class="timeline-item"><span class="tl-time">15:30</span><span class="tl-event">Pausa</span></div>
+        <div class="timeline-item"><span class="tl-time">15:52</span><span class="tl-event">Vuelta · 22m</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VACÍO -->
+  <section class="demo">
+    <h3>Estado vacío</h3>
+    <p class="text-caption">Invitación a actuar, nunca una disculpa.</p>
+    <div class="surface">
+      <div class="empty">
+        <h3>Aún no hay empleados</h3>
+        <p>Da de alta a tu plantilla para empezar a registrar jornadas.</p>
+        <button class="btn btn--primary">Añadir empleado</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL -->
+  <section class="demo">
+    <h3>Modal</h3>
+    <p class="text-caption">Solo para correcciones y confirmaciones destructivas.</p>
+    <div class="surface" style="background:var(--soft);padding:40px">
+      <div class="modal" style="margin:0 auto">
+        <h3>Corregir fichaje</h3>
+        <p class="text-secondary" style="margin-bottom:22px">Se anulará el registro original y quedará constancia del cambio.</p>
+        <div class="field">
+          <label class="label" for="m1">Nueva hora de salida</label>
+          <input class="input" id="m1" type="time" value="23:30">
+        </div>
+        <div class="field">
+          <label class="label" for="m2">Motivo</label>
+          <textarea class="textarea" id="m2" placeholder="Obligatorio"></textarea>
+        </div>
+        <div class="row-end" style="margin-top:26px">
+          <button class="btn btn--secondary">Cancelar</button>
+          <button class="btn btn--primary">Guardar corrección</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EXTENSIONES DE DOMINIO — TURNOS -->
+  <section class="demo">
+    <h3>Extensiones de dominio (Turnos)</h3>
+    <p class="text-caption">No forman parte del sistema portable. Específicas de esta app, no viajan a otros proyectos. Definidas en la sección final de design-system.css.</p>
+
+    <div class="surface stack-5">
+      <div>
+        <h4 style="margin-bottom:10px">Selector de semana</h4>
+        <div class="week-nav">
+          <button class="btn btn--secondary btn--icon" aria-label="Semana anterior">←</button>
+          <div class="week-fields">
+            Semana <input class="input--week" type="number" value="31"> · <input class="input--year" type="number" value="2026">
+            <span class="week-range">27 jul – 2 ago 2026</span>
+          </div>
+          <button class="btn btn--secondary btn--icon" aria-label="Semana siguiente">→</button>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom:10px">Cuadrante semanal</h4>
+        <div class="schedule-grid-wrap">
+          <table class="schedule-grid">
+            <thead><tr><th class="name-col">Persona</th><th>Lun 27</th><th>Mar 28</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="name-col"><div class="emp-cell"><span class="avatar">ER</span><span>Elena Ruiz</span></div></td>
+                <td class="cell"><div class="shift-chip">Mañana<span class="chip-time">08–16</span></div></td>
+                <td class="cell"><div class="shift-chip shift-chip--empty">Libre</div></td>
+              </tr>
+              <tr>
+                <td class="name-col"><div class="emp-cell"><span class="avatar">MG</span><span>Marco Gil</span></div></td>
+                <td class="cell"><div class="shift-chip shift-chip--unavailable">No disp.</div></td>
+                <td class="cell"><div class="shift-chip">Tarde<span class="chip-time">16–00</span></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom:10px">Popover de asignación</h4>
+        <div class="shift-popover show" style="position:static;display:inline-block">
+          <div class="pop-heading">Asignar turno</div>
+          <button type="button">Mañana <span class="tl-time">08–16</span></button>
+          <button type="button">Tarde <span class="tl-time">16–00</span></button>
+          <button type="button" class="remove">Quitar turno</button>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom:10px">Tarjeta expandible</h4>
+        <details class="expand-card">
+          <summary>
+            <span><span class="es-name">Elena Ruiz</span><span class="es-meta">Jornada completa · Camarero/a</span></span>
+            <span class="pill pill--off">Ver ficha</span>
+          </summary>
+          <div class="expand-body">
+            <p class="text-secondary">Formulario de edición con `.field` / `.input` / `.checkbox-group`.</p>
+          </div>
+        </details>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom:10px">Grupo de checkboxes</h4>
+        <fieldset class="checkbox-group">
+          <legend>Capacidades</legend>
+          <label class="checkbox-row"><input type="checkbox" checked>Puede turno partido</label>
+          <label class="checkbox-row"><input type="checkbox" checked>Puede apertura</label>
+        </fieldset>
+      </div>
+
+      <div>
+        <h4 style="margin-bottom:10px">Toast</h4>
+        <div class="toast-stack" style="position:static">
+          <div class="toast">Turno actualizado</div>
+          <div class="toast warn">María supera sus horas contratadas</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

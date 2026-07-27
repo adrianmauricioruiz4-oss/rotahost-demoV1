@@ -6,48 +6,46 @@
     <title>RotaHost — Iniciar sesión</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
 </head>
-<body class="login-body">
-    <div class="login-card">
-        <div class="login-brand">
-            <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 2v3M16 2v3M3 9h18"/><rect x="3" y="5" width="18" height="17" rx="3"/></svg></div>
-            <span class="brandmark">RotaHost</span>
+<body>
+    <main class="page page-narrow" style="padding-top:80px">
+        <div class="surface stack-5">
+            <div>
+                <h1 class="brand" style="padding:0">RotaHost</h1>
+                <p class="text-secondary" style="margin-top:6px">Cuadrantes que encajan con tu equipo.</p>
+            </div>
+
+            <p id="status-message" class="notice notice--alert" hidden></p>
+
+            <form id="login-form" class="stack-4" method="post" action="/login">
+                <input type="hidden" name="_csrf" id="csrf-input">
+                <div class="field">
+                    <label class="label" for="username-input">Correo electrónico</label>
+                    <input class="input" type="email" name="username" id="username-input" required autofocus>
+                </div>
+                <div class="field">
+                    <label class="label" for="password-input">Contraseña</label>
+                    <input class="input" type="password" name="password" id="password-input" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--block">Iniciar sesión</button>
+            </form>
+
+            <a href="#" id="forgot-password-link" class="text-secondary" style="text-align:center;display:block">¿Olvidaste tu contraseña?</a>
+
+            <div class="stack-4" style="border-top:1px solid var(--line);padding-top:26px">
+                <div class="field">
+                    <label class="label" for="guest-select">Tu nombre</label>
+                    <select class="select" id="guest-select">
+                        <option value="">Selecciona tu nombre…</option>
+                    </select>
+                </div>
+                <button type="button" id="guest-submit" class="btn btn--secondary btn--block">Entrar como invitado</button>
+                <p class="text-caption">Solo para ver tu horario y fichar. No podrás editar nada.</p>
+            </div>
         </div>
-        <p class="login-tagline">Cuadrantes que encajan con tu equipo.</p>
-
-        <p id="status-message" class="status-message" hidden></p>
-
-        <form id="login-form" class="login-form" method="post" action="/login">
-            <input type="hidden" name="_csrf" id="csrf-input">
-            <label>
-                Correo electrónico
-                <input type="email" name="username" id="username-input" required autofocus>
-            </label>
-            <label>
-                Contraseña
-                <input type="password" name="password" id="password-input" required>
-            </label>
-            <button type="submit" class="btn btn-primary login-submit">Iniciar sesión</button>
-        </form>
-
-        <a href="#" id="forgot-password-link" class="login-forgot">¿Olvidaste tu contraseña?</a>
-
-        <div class="login-divider"><span>o</span></div>
-
-        <div id="guest-form" class="login-form">
-            <label>
-                Tu nombre
-                <select id="guest-select">
-                    <option value="">Selecciona tu nombre…</option>
-                </select>
-            </label>
-            <button type="button" id="guest-submit" class="btn btn-ghost login-submit">Entrar como invitado</button>
-            <p class="login-guest-hint">Solo para ver tu horario y fichar. No podrás editar nada.</p>
-        </div>
-    </div>
+    </main>
 
     <script src="js/toast.js"></script>
     <script src="js/login.js"></script>

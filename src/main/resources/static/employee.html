@@ -4,86 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turnos — Mi semana</title>
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
-    <header class="app-header">
-        <h1>Mi semana</h1>
-        <p class="app-nav">
-            <span id="whoami-label"></span>
-            <a href="index.html" class="btn-back" id="back-or-logout-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="back-or-logout-label">Volver al cuadrante</span></a>
-        </p>
-    </header>
+    <header id="shell-topbar"></header>
 
-    <main>
-        <p id="status-message" class="status-message" hidden></p>
+    <main class="page">
+        <div class="row-between">
+            <h1>Mi semana</h1>
+            <span class="text-secondary" id="whoami-label"></span>
+        </div>
 
-        <section class="settings-section">
-            <form id="lookup-form" class="generate-form">
-                <label id="employee-select-field" hidden>
-                    Ver semana de
-                    <select id="employee-select"></select>
-                </label>
-                <div class="week-nav-inline">
-                    <button type="button" class="wk-btn" id="wk-prev" aria-label="Semana anterior">
+        <p id="status-message" class="notice notice--alert" style="margin-top:22px" hidden></p>
+
+        <section style="margin-top:22px">
+            <form id="lookup-form" class="row-between" style="flex-wrap:wrap;gap:16px">
+                <div class="field" id="employee-select-field" style="margin:0" hidden>
+                    <label class="label" for="employee-select">Ver semana de</label>
+                    <select class="select" id="employee-select"></select>
+                </div>
+                <div class="week-nav">
+                    <button type="button" class="btn btn--secondary btn--icon" id="wk-prev" aria-label="Semana anterior">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
                     </button>
-                    <label>
-                        Año ISO
-                        <input type="number" id="iso-year-input" min="2000" required>
-                    </label>
-                    <label>
-                        Semana ISO
-                        <input type="number" id="iso-week-input" min="1" max="53" required>
-                    </label>
-                    <button type="button" class="wk-btn" id="wk-next" aria-label="Semana siguiente">
+                    <div class="week-fields">
+                        Semana
+                        <input type="number" id="iso-week-input" min="1" max="53" class="input--week" required>
+                        ·
+                        <input type="number" id="iso-year-input" min="2000" class="input--year" required>
+                    </div>
+                    <button type="button" class="btn btn--secondary btn--icon" id="wk-next" aria-label="Semana siguiente">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
                     </button>
                 </div>
-                <button type="submit">Ver semana</button>
+                <button type="submit" class="btn btn--primary">Ver semana</button>
             </form>
         </section>
 
-        <section class="settings-section">
+        <section style="margin-top:34px">
             <h2 id="employee-heading" hidden></h2>
-            <div class="schedule-wrapper">
-                <table id="week-table" class="schedule-table">
+            <div class="surface" style="margin-top:14px;padding:0 24px">
+                <table class="table" id="week-table">
                     <thead>
-                        <tr id="week-head-row"></tr>
+                        <tr><th scope="col">Día</th><th scope="col">Turno</th></tr>
                     </thead>
-                    <tbody>
-                        <tr id="week-body-row"></tr>
-                    </tbody>
+                    <tbody id="week-body-row"></tbody>
                 </table>
             </div>
         </section>
 
-        <section class="settings-section" id="timeclock-section" hidden>
+        <section id="timeclock-section" style="margin-top:34px" hidden>
             <h2>Fichar</h2>
-            <p id="timeclock-status" class="status-message"></p>
-            <button type="button" id="timeclock-button" class="btn btn-primary"></button>
+            <div class="status-block status-block--out" id="timeclock-block" style="margin-top:14px;max-width:340px">
+                <p class="status-line"><span class="mark mark--ring" id="timeclock-mark"></span><span id="timeclock-status-label">Fuera de turno</span></p>
+                <p class="text-secondary" id="timeclock-status" style="margin-top:10px"></p>
+            </div>
+            <button type="button" id="timeclock-button" class="btn btn--primary btn--hero" style="margin-top:14px;max-width:340px"></button>
         </section>
 
-        <section class="settings-section" id="preferences-section">
+        <section id="preferences-section" style="margin-top:34px">
             <h2>Mis preferencias</h2>
-            <ul id="preferences-list" class="preferences-list"></ul>
+            <div class="surface" style="margin-top:14px;padding:0 24px">
+                <table class="table">
+                    <thead><tr><th scope="col">Preferencia</th><th scope="col" class="right">Acción</th></tr></thead>
+                    <tbody id="preferences-list"></tbody>
+                </table>
+            </div>
 
-            <form id="preference-form" class="generate-form">
-                <fieldset id="preference-fieldset" disabled>
-                    <label>
-                        Tipo
-                        <select id="pref-type-input">
+            <form id="preference-form" class="surface stack-4" style="margin-top:22px;max-width:480px">
+                <fieldset id="preference-fieldset" class="stack-4" style="border:none;padding:0;margin:0" disabled>
+                    <div class="field">
+                        <label class="label" for="pref-type-input">Tipo</label>
+                        <select class="select" id="pref-type-input">
                             <option value="PREFERS_DAY">Prefiero un día</option>
                             <option value="AVOIDS_DAY">Evito un día</option>
                             <option value="PREFERS_SHIFT">Prefiero un turno</option>
                             <option value="AVOIDS_SHIFT">Evito un turno</option>
                             <option value="UNAVAILABLE">No disponible (fecha concreta)</option>
                         </select>
-                    </label>
-                    <label id="pref-day-field">
-                        Día de la semana
-                        <select id="pref-day-input">
+                    </div>
+                    <div class="field" id="pref-day-field">
+                        <label class="label" for="pref-day-input">Día de la semana</label>
+                        <select class="select" id="pref-day-input">
                             <option value="MONDAY">Lunes</option>
                             <option value="TUESDAY">Martes</option>
                             <option value="WEDNESDAY">Miércoles</option>
@@ -92,26 +97,27 @@
                             <option value="SATURDAY">Sábado</option>
                             <option value="SUNDAY">Domingo</option>
                         </select>
-                    </label>
-                    <label id="pref-shift-field" hidden>
-                        Turno
-                        <select id="pref-shift-input"></select>
-                    </label>
-                    <label id="pref-date-field" hidden>
-                        Fecha
-                        <input type="date" id="pref-date-input">
-                    </label>
-                    <label id="pref-weight-field">
-                        Peso (1-5)
-                        <input type="number" id="pref-weight-input" min="1" max="5" value="3">
-                    </label>
-                    <button type="submit">Añadir preferencia</button>
+                    </div>
+                    <div class="field" id="pref-shift-field" hidden>
+                        <label class="label" for="pref-shift-input">Turno</label>
+                        <select class="select" id="pref-shift-input"></select>
+                    </div>
+                    <div class="field" id="pref-date-field" hidden>
+                        <label class="label" for="pref-date-input">Fecha</label>
+                        <input class="input" type="date" id="pref-date-input">
+                    </div>
+                    <div class="field" id="pref-weight-field">
+                        <label class="label" for="pref-weight-input">Peso (1-5)</label>
+                        <input class="input" type="number" id="pref-weight-input" min="1" max="5" value="3">
+                    </div>
+                    <button type="submit" class="btn btn--primary">Añadir preferencia</button>
                 </fieldset>
             </form>
-            <p id="preference-hint" class="status-message">Consulta tu semana para poder añadir preferencias.</p>
+            <p id="preference-hint" class="text-secondary" style="margin-top:14px">Consulta tu semana para poder añadir preferencias.</p>
         </section>
     </main>
 
+    <script src="js/shell.js"></script>
     <script src="js/employee.js"></script>
 </body>
 </html>

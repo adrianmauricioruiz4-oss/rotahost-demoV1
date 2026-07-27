@@ -1,8 +1,6 @@
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const WEEKEND_INDEXES = [4, 5, 6];
 const MONTH_LABELS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-/** Paleta categórica para diferenciar personas en los avatares (no es semántica de turno, no va en tokens.css). */
-const AVATAR_COLORS = ["#0F5257", "#C0673F", "#3B6EA5", "#8B5A8C", "#2F8A5B", "#B4842B", "#4A5568", "#A03A4E", "#2C7A7B", "#6B4E9E"];
 
 let currentVenueId = null;
 let currentIsoYear = null;
@@ -126,29 +124,8 @@ function formatSegmentsShort(segments) {
     return segments.map((s) => formatTime(s.startTime).slice(0, 2)).join("·");
 }
 
-function stripAccents(text) {
-    return text.normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-/**
- * ShiftTemplate es configurable por venue, así que no hay garantía de que un
- * turno se llame "Mañana"/"Tarde"/"Partido". Los reconocemos por nombre para
- * darles su color de firma; cualquier otro nombre usa el color neutro "n".
- */
-function shiftColorClass(shiftTemplate) {
-    const name = stripAccents(shiftTemplate.name).toUpperCase();
-    if (name.includes("MANANA") || name.includes("MORNING")) return "m";
-    if (name.includes("TARDE") || name.includes("AFTERNOON")) return "t";
-    if (name.includes("PARTID") || name.includes("SPLIT")) return "p";
-    return "n";
-}
-
 function initials(name) {
     return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function avatarColor(index) {
-    return AVATAR_COLORS[index % AVATAR_COLORS.length];
 }
 
 /* ---------- carga de datos ---------- */
@@ -212,29 +189,6 @@ function renderWeekLabel() {
         `Semana ${currentIsoWeek}/${currentIsoYear} · ${rangeLabel}`;
 }
 
-function renderLegend() {
-    const legend = document.getElementById("legend");
-    legend.innerHTML = "";
-
-    currentShiftTemplates.forEach((shiftTemplate) => {
-        const item = document.createElement("span");
-        item.className = "lg";
-        const swatch = document.createElement("span");
-        swatch.className = `sw sw-${shiftColorClass(shiftTemplate)}`;
-        item.appendChild(swatch);
-        item.appendChild(document.createTextNode(` ${shiftTemplate.name} · ${formatSegmentsShort(shiftTemplate.segments)}`));
-        legend.appendChild(item);
-    });
-
-    const libre = document.createElement("span");
-    libre.className = "lg";
-    const swatch = document.createElement("span");
-    swatch.className = "sw sw-l";
-    libre.appendChild(swatch);
-    libre.appendChild(document.createTextNode(" Libre"));
-    legend.appendChild(libre);
-}
-
 function renderHead() {
     const headRow = document.getElementById("schedule-head-row");
     headRow.innerHTML = "";
@@ -252,46 +206,44 @@ function renderHead() {
     });
 }
 
-function buildChip(shiftTemplate, isUnavailable) {
-    const chip = document.createElement("div");
+function buildShiftCell(shiftTemplate, isUnavailable) {
+    const wrap = document.createElement("div");
     if (isUnavailable) {
-        chip.className = "chip na";
-        chip.textContent = "No disp.";
-        return chip;
+        wrap.className = "shift-chip shift-chip--unavailable";
+        wrap.textContent = "No disp.";
+        return wrap;
     }
     if (!shiftTemplate) {
-        chip.className = "chip l";
-        chip.textContent = "Libre";
-        return chip;
+        wrap.className = "shift-chip shift-chip--empty";
+        wrap.textContent = "Libre";
+        return wrap;
     }
-    chip.className = `chip ${shiftColorClass(shiftTemplate)}`;
+    wrap.className = "shift-chip";
     const label = document.createElement("span");
     label.textContent = shiftTemplate.name;
-    chip.appendChild(label);
+    wrap.appendChild(label);
     const time = document.createElement("span");
-    time.className = "tm tnum";
+    time.className = "chip-time";
     time.textContent = formatSegmentsShort(shiftTemplate.segments);
-    chip.appendChild(time);
-    return chip;
+    wrap.appendChild(time);
+    return wrap;
 }
 
 function renderGrid() {
     const body = document.getElementById("schedule-body");
     body.innerHTML = "";
 
-    currentEmployees.forEach((employee, index) => {
+    currentEmployees.forEach((employee) => {
         const row = document.createElement("tr");
 
         const nameCell = document.createElement("td");
         nameCell.className = "name-col";
         const empWrap = document.createElement("div");
-        empWrap.className = "emp";
+        empWrap.className = "emp-cell";
         const avatar = document.createElement("span");
-        avatar.className = "av";
-        avatar.style.background = avatarColor(index);
+        avatar.className = "avatar";
         avatar.textContent = initials(employee.name);
         const nameSpan = document.createElement("span");
-        nameSpan.className = "nm";
         nameSpan.textContent = employee.name;
         empWrap.appendChild(avatar);
         empWrap.appendChild(nameSpan);
@@ -308,23 +260,14 @@ function renderGrid() {
             const shiftTemplate = shiftTemplateId ? currentShiftTemplates.find((t) => t.id === shiftTemplateId) : null;
             const isUnavailable = unavailableSet.has(`${employee.id},${day.date}`);
 
-            cell.appendChild(buildChip(shiftTemplate, isUnavailable));
+            cell.appendChild(buildShiftCell(shiftTemplate, isUnavailable));
             row.appendChild(cell);
         });
 
         body.appendChild(row);
     });
 
-    document.getElementById("table-wrap").classList.toggle("locked", currentScheduleStatus === "PUBLISHED");
-}
-
-function triggerFillingAnimation() {
-    const wrap = document.getElementById("table-wrap");
-    wrap.querySelectorAll(".chip").forEach((chip, index) => {
-        chip.style.animationDelay = `${index * 11}ms`;
-    });
-    wrap.classList.add("filling");
-    setTimeout(() => wrap.classList.remove("filling"), 700);
+    document.getElementById("schedule-table").classList.toggle("locked", currentScheduleStatus === "PUBLISHED");
 }
 
 /* ---------- edición: popover ---------- */
@@ -349,18 +292,12 @@ function renderPopoverOptions() {
     currentShiftTemplates.forEach((shiftTemplate) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "pop-opt";
-
-        const sq = document.createElement("span");
-        sq.className = `sq ${shiftColorClass(shiftTemplate)}`;
-        button.appendChild(sq);
 
         const label = document.createElement("span");
         label.textContent = shiftTemplate.name;
         button.appendChild(label);
 
         const small = document.createElement("small");
-        small.className = "tnum";
         small.textContent = formatSegmentsShort(shiftTemplate.segments);
         button.appendChild(small);
 
@@ -372,16 +309,8 @@ function renderPopoverOptions() {
     if (currentValue) {
         const removeButton = document.createElement("button");
         removeButton.type = "button";
-        removeButton.className = "pop-opt";
-
-        const sq = document.createElement("span");
-        sq.className = "sq x";
-        removeButton.appendChild(sq);
-
-        const label = document.createElement("span");
-        label.textContent = "Quitar";
-        removeButton.appendChild(label);
-
+        removeButton.className = "remove";
+        removeButton.textContent = "Quitar turno";
         removeButton.addEventListener("click", () => applyAssignment(null));
         container.appendChild(removeButton);
     }
@@ -449,105 +378,6 @@ async function applyAssignment(shiftTemplateId) {
     }
 }
 
-/* ---------- paneles laterales ---------- */
-
-function renderPanels() {
-    renderCoveragePanel();
-    renderEquityPanel();
-}
-
-function renderCoveragePanel() {
-    const list = document.getElementById("coverage-list");
-    const pill = document.getElementById("coverage-pill");
-    list.innerHTML = "";
-
-    if (currentUncoveredSlots === null) {
-        pill.hidden = true;
-        appendPanelHint(list, "Los huecos de cobertura se calculan al generar; edítalos y vuelve a generar para verlos al día.");
-        return;
-    }
-    if (currentUncoveredSlots.length === 0) {
-        pill.hidden = true;
-        appendPanelHint(list, "Cobertura completa.");
-        return;
-    }
-
-    pill.hidden = false;
-    pill.textContent = `${currentUncoveredSlots.length} hueco${currentUncoveredSlots.length === 1 ? "" : "s"}`;
-
-    currentUncoveredSlots.forEach((slot) => {
-        const shiftTemplate = currentShiftTemplates.find((t) => t.id === slot.shiftTemplateId);
-        const row = document.createElement("div");
-        row.className = "gap-row";
-
-        const badge = document.createElement("span");
-        badge.className = "gd";
-        badge.textContent = String(slot.missing);
-        row.appendChild(badge);
-
-        const text = document.createElement("span");
-        text.appendChild(document.createTextNode("Falta cubrir "));
-        const strong = document.createElement("b");
-        strong.textContent = `${slot.date}${shiftTemplate ? " · " + shiftTemplate.name : ""}`;
-        text.appendChild(strong);
-        row.appendChild(text);
-
-        const small = document.createElement("small");
-        small.textContent = "sin candidato";
-        row.appendChild(small);
-
-        list.appendChild(row);
-    });
-}
-
-function renderEquityPanel() {
-    const list = document.getElementById("equity-list");
-    list.innerHTML = "";
-
-    if (currentEquityReport === null) {
-        appendPanelHint(list, "La equidad se calcula al generar; edítalos y vuelve a generar para verla al día.");
-        return;
-    }
-    if (currentEquityReport.length === 0) {
-        appendPanelHint(list, "Sin datos de equidad para esta semana.");
-        return;
-    }
-
-    const sorted = [...currentEquityReport].sort((a, b) => b.badShiftsThisWeek - a.badShiftsThisWeek);
-    const max = Math.max(...sorted.map((e) => e.badShiftsThisWeek), 1);
-
-    sorted.forEach((entry) => {
-        const employee = currentEmployees.find((e) => e.id === entry.employeeId);
-        const row = document.createElement("div");
-        row.className = "eq-row";
-
-        const name = document.createElement("span");
-        name.textContent = employee ? employee.name.split(" ")[0] : `#${entry.employeeId}`;
-        row.appendChild(name);
-
-        const bar = document.createElement("span");
-        bar.className = "eq-bar";
-        const fill = document.createElement("span");
-        fill.style.width = `${(entry.badShiftsThisWeek / max) * 100}%`;
-        bar.appendChild(fill);
-        row.appendChild(bar);
-
-        const val = document.createElement("span");
-        val.className = "val tnum";
-        val.textContent = String(entry.badShiftsThisWeek);
-        row.appendChild(val);
-
-        list.appendChild(row);
-    });
-}
-
-function appendPanelHint(list, message) {
-    const hint = document.createElement("p");
-    hint.className = "panel-empty";
-    hint.textContent = message;
-    list.appendChild(hint);
-}
-
 /* ---------- estado del tablero (vacío / con datos) ---------- */
 
 function renderTopbarActions() {
@@ -568,9 +398,75 @@ function renderTopbarActions() {
     generateButton.hidden = true;
     printButton.hidden = false;
     badge.hidden = false;
-    badge.className = "badge " + (currentScheduleStatus === "PUBLISHED" ? "badge-pub" : "badge-draft");
+    badge.className = "pill " + (currentScheduleStatus === "PUBLISHED" ? "pill--ok" : "pill--warn");
     document.getElementById("status-txt").textContent = currentScheduleStatus === "PUBLISHED" ? "Publicado" : "Borrador";
     publishButton.hidden = currentScheduleStatus === "PUBLISHED";
+}
+
+/* ---------- huecos de cobertura y equidad ---------- */
+
+function renderCoverageList() {
+    const list = document.getElementById("coverage-list");
+    list.innerHTML = "";
+
+    if (currentUncoveredSlots === null) {
+        return;
+    }
+    if (currentUncoveredSlots.length === 0) {
+        const notice = document.createElement("div");
+        notice.className = "notice notice--ok";
+        notice.setAttribute("role", "status");
+        notice.innerHTML = '<span class="mark mark--dot"></span>Cobertura completa';
+        list.appendChild(notice);
+        return;
+    }
+
+    currentUncoveredSlots.forEach((slot) => {
+        const shiftTemplate = currentShiftTemplates.find((t) => t.id === slot.shiftTemplateId);
+        const notice = document.createElement("div");
+        notice.className = "notice notice--alert";
+        notice.setAttribute("role", "status");
+
+        const mark = document.createElement("span");
+        mark.className = "mark mark--dot";
+        notice.appendChild(mark);
+
+        const text = document.createElement("span");
+        text.textContent = `Falta${slot.missing === 1 ? "" : "n"} ${slot.missing} persona${slot.missing === 1 ? "" : "s"} · ${slot.date}${shiftTemplate ? " · " + shiftTemplate.name : ""}`;
+        notice.appendChild(text);
+
+        list.appendChild(notice);
+    });
+}
+
+function renderEquityTable() {
+    const section = document.getElementById("equity-section");
+    const body = document.getElementById("equity-table-body");
+    body.innerHTML = "";
+
+    if (currentEquityReport === null || currentEquityReport.length === 0) {
+        section.hidden = true;
+        return;
+    }
+    section.hidden = false;
+
+    [...currentEquityReport]
+        .sort((a, b) => b.badShiftsThisWeek - a.badShiftsThisWeek)
+        .forEach((entry) => {
+            const employee = currentEmployees.find((e) => e.id === entry.employeeId);
+            const row = document.createElement("tr");
+
+            const nameCell = document.createElement("td");
+            nameCell.textContent = employee ? employee.name : `#${entry.employeeId}`;
+            row.appendChild(nameCell);
+
+            const valueCell = document.createElement("td");
+            valueCell.className = "right";
+            valueCell.textContent = String(entry.badShiftsThisWeek);
+            row.appendChild(valueCell);
+
+            body.appendChild(row);
+        });
 }
 
 function showBoard() {
@@ -608,6 +504,8 @@ async function applyState(data) {
     renderWeekLabel();
     renderHead();
     renderGrid();
+    renderCoverageList();
+    renderEquityTable();
     showBoard();
 
     fetchJson(`/api/venues/${data.venueId}`)
@@ -679,7 +577,6 @@ async function generateWeek() {
             equityReport: response.equityReport
         });
         showToast("Propuesta generada · revísala antes de publicar");
-        triggerFillingAnimation();
     } catch (error) {
         showToast(error.message, "warn");
     } finally {

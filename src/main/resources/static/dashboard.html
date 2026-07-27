@@ -6,47 +6,36 @@
     <title>Turnos · Panel principal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
-    <div class="app">
-        <aside class="sidebar" id="shell-sidebar"></aside>
+    <header id="shell-topbar"></header>
 
-        <div class="main">
-            <div class="topbar">
-                <h1 class="dash-title">Panel principal</h1>
-                <div class="spring"></div>
+    <main class="page">
+        <h1>Panel principal</h1>
+        <p class="text-lead" id="dash-venue-name" style="margin-top:8px">—</p>
+
+        <p id="status-message" class="notice notice--alert" style="margin-top:22px" hidden></p>
+
+        <section class="grid-2" id="dash-stats" style="margin-top:22px" hidden>
+            <div class="tile">
+                <div class="tile-n" id="dash-employee-count">—</div>
+                <div class="tile-l">Empleados activos</div>
             </div>
+            <div class="tile">
+                <div style="padding-top:4px">
+                    <span class="pill" id="dash-status-badge"><span class="mark mark--dot"></span><span id="dash-status-text">—</span></span>
+                </div>
+                <div class="tile-l" id="dash-week-label">Cuadrante de esta semana</div>
+            </div>
+        </section>
 
-            <main class="dash-main">
-                <p id="status-message" class="status-message" hidden></p>
-
-                <section class="dash-stats" id="dash-stats" hidden>
-                    <div class="dash-card">
-                        <span class="dash-card-label">Local</span>
-                        <span class="dash-card-value" id="dash-venue-name">—</span>
-                    </div>
-                    <div class="dash-card">
-                        <span class="dash-card-label">Empleados activos</span>
-                        <span class="dash-card-value" id="dash-employee-count">—</span>
-                    </div>
-                    <div class="dash-card">
-                        <span class="dash-card-label" id="dash-week-label">Cuadrante de esta semana</span>
-                        <span class="dash-card-value" id="dash-schedule-status">
-                            <span class="badge" id="dash-status-badge"><span class="dot"></span><span id="dash-status-text">—</span></span>
-                        </span>
-                    </div>
-                </section>
-
-                <section class="settings-section" id="dash-alerts-section" hidden>
-                    <h2>Alertas y conflictos pendientes</h2>
-                    <ul class="dash-alerts" id="dash-alerts-list"></ul>
-                </section>
-            </main>
-        </div>
-    </div>
+        <section style="margin-top:34px" id="dash-alerts-section" hidden>
+            <h2>Alertas y conflictos pendientes</h2>
+            <div class="stack-3" id="dash-alerts-list" style="margin-top:14px"></div>
+        </section>
+    </main>
 
     <script src="js/shell.js"></script>
     <script src="js/dashboard.js"></script>

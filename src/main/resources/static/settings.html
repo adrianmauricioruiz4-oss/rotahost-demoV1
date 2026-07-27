@@ -4,93 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turnos — Configuración</title>
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/design-system.css">
 </head>
 <body>
-    <header class="app-header">
+    <header id="shell-topbar"></header>
+
+    <main class="page">
         <h1>Configuración</h1>
-        <p class="app-nav">
-            <a href="index.html" class="btn-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Volver al cuadrante</a>
-        </p>
-    </header>
 
-    <main>
-        <p id="status-message" class="status-message" hidden></p>
+        <p id="status-message" class="notice notice--alert" style="margin-top:22px" hidden></p>
 
-        <section class="settings-section">
+        <section style="margin-top:34px">
             <h2>General</h2>
-            <form class="generate-form">
-                <label>
-                    Idioma
-                    <select id="language-select">
+            <form class="surface stack-4" style="margin-top:14px;max-width:480px">
+                <div class="field">
+                    <label class="label" for="language-select">Idioma</label>
+                    <select class="select" id="language-select">
                         <option value="es">Español</option>
                         <option value="en" disabled>English (próximamente)</option>
                     </select>
-                </label>
-                <label class="checkbox-label">
+                </div>
+                <label class="checkbox-row">
                     <input type="checkbox" id="notifications-toggle" checked>
                     Avisarme cuando haya huecos de cobertura sin cubrir
                 </label>
             </form>
         </section>
 
-        <section class="settings-section">
+        <section style="margin-top:34px">
             <h2>Local</h2>
-            <form id="venue-edit-form" class="generate-form" hidden>
-                <label>
-                    Nombre
-                    <input type="text" id="venue-name-input" required>
-                </label>
-                <label>
-                    Apertura
-                    <input type="time" id="venue-opening-input" required>
-                </label>
-                <label>
-                    Cierre
-                    <input type="time" id="venue-closing-input" required>
-                </label>
-                <button type="submit">Guardar horario del local</button>
+            <form id="venue-edit-form" class="surface stack-4" style="margin-top:14px;max-width:480px" hidden>
+                <div class="field">
+                    <label class="label" for="venue-name-input">Nombre</label>
+                    <input class="input" type="text" id="venue-name-input" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="venue-opening-input">Apertura</label>
+                    <input class="input" type="time" id="venue-opening-input" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="venue-closing-input">Cierre</label>
+                    <input class="input" type="time" id="venue-closing-input" required>
+                </div>
+                <button type="submit" class="btn btn--primary">Guardar horario del local</button>
             </form>
         </section>
 
-        <section class="settings-section">
+        <section style="margin-top:34px">
             <h2>Turnos</h2>
-            <form id="create-shift-template-form" class="generate-form">
-                <label>
-                    Nombre de la franja
-                    <input type="text" id="new-shift-name-input" placeholder="Ej. Mañana" required>
-                </label>
-                <label>
-                    Inicio
-                    <input type="time" id="new-shift-start-input" required>
-                </label>
-                <label>
-                    Fin
-                    <input type="time" id="new-shift-end-input" required>
-                </label>
-                <button type="submit">Crear franja</button>
+            <form id="create-shift-template-form" class="surface stack-4" style="margin-top:14px">
+                <div class="field">
+                    <label class="label" for="new-shift-name-input">Nombre de la franja</label>
+                    <input class="input" type="text" id="new-shift-name-input" placeholder="Ej. Mañana" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="new-shift-start-input">Inicio</label>
+                    <input class="input" type="time" id="new-shift-start-input" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="new-shift-end-input">Fin</label>
+                    <input class="input" type="time" id="new-shift-end-input" required>
+                </div>
+                <button type="submit" class="btn btn--primary">Crear franja</button>
             </form>
-            <p id="shift-templates-empty" hidden>Todavía no hay franjas horarias creadas para este local.</p>
-            <div id="shift-templates-list"></div>
+            <p id="shift-templates-empty" class="text-secondary" style="margin-top:14px" hidden>Todavía no hay franjas horarias creadas para este local.</p>
+            <div id="shift-templates-list" class="stack-3" style="margin-top:14px"></div>
         </section>
 
-        <section class="settings-section">
+        <section style="margin-top:34px">
             <h2>Cobertura mínima</h2>
-            <p>Personas necesarias en cada franja horaria, por día de la semana.</p>
-            <p id="coverage-empty" hidden>Crea primero alguna franja horaria para poder fijar su cobertura.</p>
-            <div id="coverage-wrap" class="schedule-wrapper" hidden>
-                <table class="schedule-table" id="coverage-table">
+            <p class="text-secondary" style="margin-top:6px">Personas necesarias en cada franja horaria, por día de la semana.</p>
+            <p id="coverage-empty" class="text-secondary" style="margin-top:14px" hidden>Crea primero alguna franja horaria para poder fijar su cobertura.</p>
+            <div id="coverage-wrap" class="surface" style="margin-top:14px;padding:0 24px" hidden>
+                <table class="table" id="coverage-table">
                     <thead>
                         <tr>
-                            <th>Franja</th>
-                            <th>Lun</th>
-                            <th>Mar</th>
-                            <th>Mié</th>
-                            <th>Jue</th>
-                            <th>Vie</th>
-                            <th>Sáb</th>
-                            <th>Dom</th>
+                            <th scope="col">Franja</th>
+                            <th scope="col">Lun</th>
+                            <th scope="col">Mar</th>
+                            <th scope="col">Mié</th>
+                            <th scope="col">Jue</th>
+                            <th scope="col">Vie</th>
+                            <th scope="col">Sáb</th>
+                            <th scope="col">Dom</th>
                         </tr>
                     </thead>
                     <tbody id="coverage-table-body"></tbody>
@@ -99,6 +98,7 @@
         </section>
     </main>
 
+    <script src="js/shell.js"></script>
     <script src="js/settings.js"></script>
 </body>
 </html>

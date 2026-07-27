@@ -30,7 +30,7 @@ function setStatusMessage(message, isError) {
         return;
     }
     el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
+    el.className = "notice " + (isError ? "notice--alert" : "notice--ok");
     el.hidden = false;
 }
 
@@ -38,13 +38,13 @@ function renderScheduleStatus(scheduleStatus) {
     const badge = document.getElementById("dash-status-badge");
     const text = document.getElementById("dash-status-text");
     if (scheduleStatus === "PUBLISHED") {
-        badge.className = "badge badge-pub";
+        badge.className = "pill pill--ok";
         text.textContent = "Publicado";
     } else if (scheduleStatus === "DRAFT") {
-        badge.className = "badge badge-draft";
+        badge.className = "pill pill--warn";
         text.textContent = "Borrador";
     } else {
-        badge.className = "badge";
+        badge.className = "pill pill--off";
         text.textContent = "Sin generar";
     }
 }
@@ -60,8 +60,15 @@ function renderAlerts(alerts) {
     }
     section.hidden = false;
     alerts.forEach((alert) => {
-        const item = document.createElement("li");
-        item.textContent = alert;
+        const item = document.createElement("div");
+        item.className = "notice notice--alert";
+        item.setAttribute("role", "status");
+        const mark = document.createElement("span");
+        mark.className = "mark mark--dot";
+        item.appendChild(mark);
+        const text = document.createElement("span");
+        text.textContent = alert;
+        item.appendChild(text);
         list.appendChild(item);
     });
 }
