@@ -286,7 +286,8 @@ p { margin: 0; }
 
 /* ---------- 13. LÍNEA DE TIEMPO ---------- */
 .timeline { border-top: 1px solid var(--line); padding-top: 20px; }
-.timeline h3 { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-bottom: var(--s-3); }
+/* h2 además de h3: la pantalla de fichaje encabeza con h1, y saltar a h3 rompería la jerarquía. */
+.timeline h2, .timeline h3 { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-bottom: var(--s-3); }
 .timeline-item {
   display: flex; align-items: baseline; gap: 14px;
   font-size: 15px; padding: 7px 0;

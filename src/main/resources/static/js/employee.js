@@ -394,46 +394,28 @@ function updateSectionVisibilityForViewedEmployee() {
     document.getElementById("preferences-section").hidden = !viewingSelf || isGuestUser;
 }
 
-async function loadTimeClockStatus() {
-    const button = document.getElementById("timeclock-button");
-    const status = document.getElementById("timeclock-status");
-    try {
-        applyTimeClockStatus(await fetchJson("/api/timeclock/status"), button, status);
-    } catch (error) {
-        status.textContent = "No se ha podido cargar tu estado de fichaje.";
-    }
-}
-
-const PUNCH_LABELS = {
-    CLOCK_IN: "Fichar entrada",
-    CLOCK_OUT: "Fichar salida",
-    BREAK_END: "Volver al trabajo"
+const EVENT_LABELS = {
+    CLOCK_IN: "Entrada",
+    BREAK_START: "Pausa",
+    BREAK_END: "Vuelta de la pausa",
+    CLOCK_OUT: "Salida"
 };
 
-function applyTimeClockStatus(data, button, status) {
-    button.textContent = PUNCH_LABELS[data.nextAction] || "Fichar";
-    if (data.lastEntry) {
-        const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
-            weekday: "long", hour: "2-digit", minute: "2-digit"
-        });
-        const lastLabel = data.lastEntry.type === "CLOCK_IN" ? "Entrada" : "Salida";
-        status.textContent = `Tu último fichaje: ${lastLabel}, ${time}.`;
-    } else {
-        status.textContent = "Todavía no has fichado ninguna vez.";
-    }
-}
-
-async function punch() {
-    const button = document.getElementById("timeclock-button");
+/** Solo el resumen del último fichaje: fichar de verdad se hace en fichar.html. */
+async function loadTimeClockStatus() {
     const status = document.getElementById("timeclock-status");
-    button.disabled = true;
     try {
-        await fetchJson("/api/timeclock/punch", { method: "POST" });
-        await loadTimeClockStatus();
+        const data = await fetchJson("/api/timeclock/status");
+        if (data.lastEntry) {
+            const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
+                weekday: "long", hour: "2-digit", minute: "2-digit"
+            });
+            status.textContent = `Tu último fichaje: ${EVENT_LABELS[data.lastEntry.type] || data.lastEntry.type}, ${time}.`;
+        } else {
+            status.textContent = "Todavía no has fichado ninguna vez.";
+        }
     } catch (error) {
-        status.textContent = error.message;
-    } finally {
-        button.disabled = false;
+        status.textContent = "No se ha podido cargar tu estado de fichaje.";
     }
 }
 
@@ -520,7 +502,6 @@ document.addEventListener("DOMContentLoaded", () => {
         loadMyWeek(week.isoYear, week.isoWeek);
     });
 
-    document.getElementById("timeclock-button").addEventListener("click", punch);
     document.getElementById("new-preference-button").addEventListener("click", openPreferenceForm);
 
     document.getElementById("employee-select").addEventListener("change", (event) => {

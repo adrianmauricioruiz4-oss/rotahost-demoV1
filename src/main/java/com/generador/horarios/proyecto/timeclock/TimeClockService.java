@@ -84,6 +84,17 @@ public class TimeClockService {
                 allowance);
     }
 
+    /**
+     * Fichajes de una persona en un día concreto, en orden. Es lo que la pantalla del
+     * empleado enseña como línea de tiempo: el trabajador tiene derecho a ver sus registros.
+     */
+    @Transactional(readOnly = true)
+    public List<TimeClockEntryResponse> entriesOn(Long employeeId, LocalDate date) {
+        return timeClockEntryRepository.findByEmployeeIdAndTimestampBetweenOrderByTimestampAsc(
+                        employeeId, date.atStartOfDay(), date.plusDays(1).atStartOfDay())
+                .stream().map(this::toResponse).toList();
+    }
+
     /** Ficha la acción que toque según el último fichaje. */
     @Transactional
     public TimeClockEntryResponse punch(Long employeeId) {

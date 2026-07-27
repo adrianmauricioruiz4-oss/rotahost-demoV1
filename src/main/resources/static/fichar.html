@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RotaTeam · Fichar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+    <div class="topbar" id="shell-topbar"></div>
+
+    <!--
+      Pantalla de móvil: máxima simplicidad, seis elementos como mucho (DESIGN.md).
+      La hora del reloj no aparece, el móvil ya la enseña. El número grande es el tiempo
+      acumulado, no la hora.
+    -->
+    <main class="page page-narrow stack-5">
+        <h1 id="greeting">Hola</h1>
+
+        <p id="status-message" class="notice" role="status" hidden></p>
+
+        <div class="status-block status-block--out" id="status-block">
+            <p class="status-line">
+                <span class="mark mark--ring" id="state-mark"></span>
+                <span id="state-text">Fuera de turno</span>
+            </p>
+            <p class="figure" id="figure" style="margin-top:16px">—</p>
+            <p class="text-secondary" id="since" style="margin-top:10px"></p>
+        </div>
+
+        <div class="row-between">
+            <span class="text-secondary" id="total-label">Esta semana</span>
+            <span class="text-body" id="total-value">—</span>
+        </div>
+
+        <div>
+            <button type="button" class="btn btn--primary btn--hero" id="primary-action">Fichar entrada</button>
+            <button type="button" class="btn btn--secondary btn--block" id="break-action" hidden style="margin-top:10px">Hacer una pausa</button>
+            <p class="text-caption" id="action-note" style="text-align:center;margin-top:14px"></p>
+        </div>
+
+        <div class="timeline">
+            <h2>Hoy</h2>
+            <div id="timeline-items"></div>
+        </div>
+    </main>
+
+    <script src="js/notice.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/timeclock.js"></script>
+</body>
+</html>

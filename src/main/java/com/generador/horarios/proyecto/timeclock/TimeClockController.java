@@ -3,8 +3,12 @@ package com.generador.horarios.proyecto.timeclock;
 import com.generador.horarios.proyecto.shared.security.CurrentUserService;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryResponse;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockStatusResponse;
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +31,20 @@ public class TimeClockController {
     public TimeClockStatusResponse status(Authentication authentication) {
         Long employeeId = currentUserService.currentEmployee(authentication).getId();
         return timeClockService.status(employeeId);
+    }
+
+    /**
+     * Fichajes propios de un día, para la línea de tiempo. Solo los de quien pregunta: para
+     * ver los de otra persona está la consola del encargado.
+     *
+     * @param date día a consultar; si falta, hoy
+     */
+    @GetMapping("/entries")
+    public List<TimeClockEntryResponse> entries(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            Authentication authentication) {
+        Long employeeId = currentUserService.currentEmployee(authentication).getId();
+        return timeClockService.entriesOn(employeeId, date == null ? LocalDate.now() : date);
     }
 
     /**
