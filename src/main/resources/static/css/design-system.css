@@ -375,6 +375,75 @@ p { margin: 0; }
 /* Fila de acciones al final de una fila de tabla. */
 .row-actions { display: flex; gap: var(--s-2); justify-content: flex-end; flex-wrap: wrap; }
 
+/* ---------- REJILLA DEL CUADRANTE (dominio) ----------
+   Personas en filas, días en columnas. El sistema base solo trae .table, que es una lista
+   de filas y no una matriz editable, así que esto es propio de RotaTeam y no viaja al
+   siguiente proyecto. Los turnos NO se distinguen por color: el sistema no tiene paleta
+   categórica y DESIGN.md prohíbe colores fuera de los tokens, así que cada celda dice en
+   texto qué turno es y a qué hora. */
+.rota-wrap { overflow-x: auto; }
+
+.rota { width: 100%; border-collapse: collapse; min-width: 760px; }
+
+.rota thead th {
+  text-align: left; white-space: nowrap;
+  font-size: 14px; font-weight: 500; color: var(--ink-3);
+  padding: var(--s-3) var(--s-2);
+  border-bottom: 1px solid var(--line);
+}
+.rota tbody th {
+  text-align: left; white-space: nowrap;
+  font-size: 16px; font-weight: 500; color: var(--ink);
+  letter-spacing: -0.01em;
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+  /* La columna de nombres se queda fija al desplazar la semana en horizontal. */
+  position: sticky; left: 0; background: var(--white);
+}
+.rota tbody td {
+  padding: var(--s-1) var(--s-1);
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.rota tbody tr:last-child th, .rota tbody tr:last-child td { border-bottom: none; }
+
+/* Una celda = un turno de una persona un día. Es un <button> real, no un div pinchable. */
+.rota-cell {
+  display: block; width: 100%;
+  min-height: var(--touch);
+  border: none; border-radius: var(--r-sm);
+  background: var(--soft);
+  padding: var(--s-2) var(--s-3);
+  text-align: left;
+  font-size: 14px; font-weight: 500; color: var(--ink);
+  cursor: pointer;
+  transition: opacity .12s ease;
+}
+.rota-cell:hover:not(:disabled) { opacity: .82; }
+.rota-cell:disabled { cursor: default; }
+.rota-cell .rota-time { display: block; font-weight: 400; color: var(--ink-2); }
+
+.rota-cell--free { background: transparent; color: var(--ink-3); font-weight: 400; }
+.rota-cell--off  { background: var(--warn-soft);  color: var(--warn); }
+/* Marca temporal cuando el cambio rompe una restricción dura y el backend lo rechaza. */
+.rota-cell--rejected { background: var(--alert-soft); color: var(--alert); }
+
+/* ---------- IMPRESIÓN (T3.6: el papel de la cocina existe) ---------- */
+.print-only { display: none; }
+
+@media print {
+  .topbar, .btn, .notice, .no-print { display: none !important; }
+  .print-only { display: block !important; }
+
+  body { background: var(--white); }
+  .page { max-width: none; padding: 0; }
+  .surface { padding: 0; border-radius: 0; }
+  .rota-wrap { overflow: visible; }
+  .rota { min-width: 0; }
+  .rota-cell { background: none; padding: var(--s-1) 0; }
+  .rota-cell--free { color: var(--ink-3); }
+}
+
 /* La barra base no contempla móvil y aquí hay cinco secciones más el nombre del
    local: en pantalla estrecha la marca se queda arriba y la navegación pasa a una
    fila propia con desplazamiento horizontal. */

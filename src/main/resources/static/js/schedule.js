@@ -1,8 +1,5 @@
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-const WEEKEND_INDEXES = [4, 5, 6];
 const MONTH_LABELS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-/** Paleta categórica para diferenciar personas en los avatares (no es semántica de turno, no va en tokens.css). */
-const AVATAR_COLORS = ["#0F5257", "#C0673F", "#3B6EA5", "#8B5A8C", "#2F8A5B", "#B4842B", "#4A5568", "#A03A4E", "#2C7A7B", "#6B4E9E"];
 
 let currentVenueId = null;
 let currentIsoYear = null;
@@ -17,7 +14,6 @@ let unavailableSet = new Set();
 /** null = no se han recalculado desde la última vez que se generó (ver GET /api/schedules). */
 let currentUncoveredSlots = null;
 let currentEquityReport = null;
-let popTarget = null;
 
 /** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
 function csrfToken() {
@@ -55,6 +51,10 @@ async function fetchJson(url, options) {
         return null;
     }
     return JSON.parse(text);
+}
+
+function setStatusMessage(message, kind) {
+    showNotice("status-message", message, kind);
 }
 
 /* ---------- fechas ---------- */
@@ -111,44 +111,27 @@ function formatDateRangeLabel(days) {
     return `${first.getUTCDate()} ${firstMonth} – ${last.getUTCDate()} ${lastMonth} ${year}`;
 }
 
+function formatDayLabel(isoDate) {
+    const day = currentDays.find((d) => d.date === isoDate);
+    return day ? day.label : isoDate;
+}
+
 /* ---------- formato de turnos ---------- */
 
 function formatTime(localTime) {
     return localTime.slice(0, 5);
 }
 
-/** "08:00-16:00" -> "08–16"; varios tramos (partido) -> "12·20" (hora de inicio de cada tramo). */
-function formatSegmentsShort(segments) {
-    if (!segments || segments.length === 0) return "";
-    if (segments.length === 1) {
-        return `${formatTime(segments[0].startTime)}–${formatTime(segments[0].endTime)}`;
+/** "08:00–16:00"; el partido, con sus dos tramos: "12:00–16:00 y 20:00–00:00". */
+function formatSegments(segments) {
+    if (!segments || segments.length === 0) {
+        return "";
     }
-    return segments.map((s) => formatTime(s.startTime).slice(0, 2)).join("·");
+    return segments.map((s) => `${formatTime(s.startTime)}–${formatTime(s.endTime)}`).join(" y ");
 }
 
-function stripAccents(text) {
-    return text.normalize("NFD").replace(/[̀-ͯ]/g, "");
-}
-
-/**
- * ShiftTemplate es configurable por venue, así que no hay garantía de que un
- * turno se llame "Mañana"/"Tarde"/"Partido". Los reconocemos por nombre para
- * darles su color de firma; cualquier otro nombre usa el color neutro "n".
- */
-function shiftColorClass(shiftTemplate) {
-    const name = stripAccents(shiftTemplate.name).toUpperCase();
-    if (name.includes("MANANA") || name.includes("MORNING")) return "m";
-    if (name.includes("TARDE") || name.includes("AFTERNOON")) return "t";
-    if (name.includes("PARTID") || name.includes("SPLIT")) return "p";
-    return "n";
-}
-
-function initials(name) {
-    return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
-
-function avatarColor(index) {
-    return AVATAR_COLORS[index % AVATAR_COLORS.length];
+function shiftTemplateById(id) {
+    return currentShiftTemplates.find((t) => t.id === id) || null;
 }
 
 /* ---------- carga de datos ---------- */
@@ -188,7 +171,7 @@ function groupAssignments(assignments) {
     return map;
 }
 
-/* ---------- inputs del topbar ---------- */
+/* ---------- inputs de la semana ---------- */
 
 /** El venue no se elige a mano: es el del encargado autenticado (ver /api/auth/me en el init). */
 function getVenueId() {
@@ -203,209 +186,151 @@ function getIsoWeek() {
     return Number(document.getElementById("iso-week-input").value);
 }
 
-/* ---------- render: cabecera, leyenda, rejilla ---------- */
+/* ---------- render: cabecera y rejilla ---------- */
 
 function renderWeekLabel() {
     const rangeLabel = formatDateRangeLabel(currentDays);
-    document.getElementById("wk-sub").textContent = rangeLabel;
+    document.getElementById("board-sub").textContent =
+        `Semana ${currentIsoWeek} · ${rangeLabel} · ${currentEmployees.length} personas`;
     document.getElementById("print-subtitle").textContent =
         `Semana ${currentIsoWeek}/${currentIsoYear} · ${rangeLabel}`;
 }
 
-function renderLegend() {
-    const legend = document.getElementById("legend");
-    legend.innerHTML = "";
-
-    currentShiftTemplates.forEach((shiftTemplate) => {
-        const item = document.createElement("span");
-        item.className = "lg";
-        const swatch = document.createElement("span");
-        swatch.className = `sw sw-${shiftColorClass(shiftTemplate)}`;
-        item.appendChild(swatch);
-        item.appendChild(document.createTextNode(` ${shiftTemplate.name} · ${formatSegmentsShort(shiftTemplate.segments)}`));
-        legend.appendChild(item);
-    });
-
-    const libre = document.createElement("span");
-    libre.className = "lg";
-    const swatch = document.createElement("span");
-    swatch.className = "sw sw-l";
-    libre.appendChild(swatch);
-    libre.appendChild(document.createTextNode(" Libre"));
-    legend.appendChild(libre);
-}
-
 function renderHead() {
     const headRow = document.getElementById("schedule-head-row");
-    headRow.innerHTML = "";
+    headRow.replaceChildren();
 
     const nameTh = document.createElement("th");
-    nameTh.className = "name-col";
+    nameTh.scope = "col";
     nameTh.textContent = "Persona";
     headRow.appendChild(nameTh);
 
-    currentDays.forEach((day, index) => {
+    currentDays.forEach((day) => {
         const th = document.createElement("th");
-        if (WEEKEND_INDEXES.includes(index)) th.className = "wknd";
+        th.scope = "col";
         th.textContent = day.label;
         headRow.appendChild(th);
     });
 }
 
-function buildChip(shiftTemplate, isUnavailable) {
-    const chip = document.createElement("div");
+/**
+ * Cada celda es un botón real, no un div pinchable: así se llega con el tabulador y se
+ * activa con Enter. El turno se distingue por su nombre y su horario, nunca por el color.
+ */
+function buildCell(employee, day) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "rota-cell";
+    button.dataset.employeeId = String(employee.id);
+    button.dataset.date = day.date;
+
+    const isUnavailable = unavailableSet.has(`${employee.id},${day.date}`);
+    const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date) || null;
+    const shiftTemplate = shiftTemplateId ? shiftTemplateById(shiftTemplateId) : null;
+
     if (isUnavailable) {
-        chip.className = "chip na";
-        chip.textContent = "No disp.";
-        return chip;
+        button.className += " rota-cell--off";
+        button.textContent = "No disponible";
+        button.disabled = true;
+        button.setAttribute("aria-label", `${employee.name}, ${day.label}: no disponible`);
+        return button;
     }
     if (!shiftTemplate) {
-        chip.className = "chip l";
-        chip.textContent = "Libre";
-        return chip;
+        button.className += " rota-cell--free";
+        button.textContent = "Libre";
+        button.setAttribute("aria-label", `${employee.name}, ${day.label}: libre. Cambiar turno`);
+    } else {
+        button.textContent = shiftTemplate.name;
+        const time = document.createElement("span");
+        time.className = "rota-time";
+        time.textContent = formatSegments(shiftTemplate.segments);
+        button.appendChild(time);
+        button.setAttribute("aria-label",
+            `${employee.name}, ${day.label}: ${shiftTemplate.name}, ${formatSegments(shiftTemplate.segments)}. Cambiar turno`);
     }
-    chip.className = `chip ${shiftColorClass(shiftTemplate)}`;
-    const label = document.createElement("span");
-    label.textContent = shiftTemplate.name;
-    chip.appendChild(label);
-    const time = document.createElement("span");
-    time.className = "tm tnum";
-    time.textContent = formatSegmentsShort(shiftTemplate.segments);
-    chip.appendChild(time);
-    return chip;
+
+    // Un cuadrante publicado no se toca desde aquí; se edita con "Cambios de última hora".
+    button.disabled = currentScheduleStatus === "PUBLISHED";
+    return button;
 }
 
 function renderGrid() {
     const body = document.getElementById("schedule-body");
-    body.innerHTML = "";
+    body.replaceChildren();
 
-    currentEmployees.forEach((employee, index) => {
+    currentEmployees.forEach((employee) => {
         const row = document.createElement("tr");
 
-        const nameCell = document.createElement("td");
-        nameCell.className = "name-col";
-        const empWrap = document.createElement("div");
-        empWrap.className = "emp";
-        const avatar = document.createElement("span");
-        avatar.className = "av";
-        avatar.style.background = avatarColor(index);
-        avatar.textContent = initials(employee.name);
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "nm";
-        nameSpan.textContent = employee.name;
-        empWrap.appendChild(avatar);
-        empWrap.appendChild(nameSpan);
-        nameCell.appendChild(empWrap);
+        const nameCell = document.createElement("th");
+        nameCell.scope = "row";
+        nameCell.textContent = employee.name;
         row.appendChild(nameCell);
 
         currentDays.forEach((day) => {
             const cell = document.createElement("td");
-            cell.className = "cell";
-            cell.dataset.employeeId = String(employee.id);
-            cell.dataset.date = day.date;
-
-            const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date) || null;
-            const shiftTemplate = shiftTemplateId ? currentShiftTemplates.find((t) => t.id === shiftTemplateId) : null;
-            const isUnavailable = unavailableSet.has(`${employee.id},${day.date}`);
-
-            cell.appendChild(buildChip(shiftTemplate, isUnavailable));
+            cell.appendChild(buildCell(employee, day));
             row.appendChild(cell);
         });
 
         body.appendChild(row);
     });
 
-    document.getElementById("table-wrap").classList.toggle("locked", currentScheduleStatus === "PUBLISHED");
+    document.getElementById("grid-hint").hidden = currentScheduleStatus === "PUBLISHED";
 }
 
-function triggerFillingAnimation() {
-    const wrap = document.getElementById("table-wrap");
-    wrap.querySelectorAll(".chip").forEach((chip, index) => {
-        chip.style.animationDelay = `${index * 11}ms`;
-    });
-    wrap.classList.add("filling");
-    setTimeout(() => wrap.classList.remove("filling"), 700);
-}
+/* ---------- edición de una asignación ---------- */
 
-/* ---------- edición: popover ---------- */
+/**
+ * Abre el selector de turno de una celda. Antes era un menú flotante posicionado a mano;
+ * ahora es el modal del sistema, que se cierra con Escape y no se sale de la pantalla.
+ */
+function openAssignmentModal(employeeId, date, cell) {
+    const employee = currentEmployees.find((e) => e.id === employeeId);
+    const currentValue = assignmentsByEmployeeDate.get(employeeId)?.get(date) || null;
 
-function openPopover(cell, employeeId, date) {
-    if (currentScheduleStatus === "PUBLISHED") return;
-    const key = `${employeeId},${date}`;
-    if (unavailableSet.has(key)) {
-        const employee = currentEmployees.find((e) => e.id === employeeId);
-        showToast(`${employee ? employee.name.split(" ")[0] : "Esta persona"} no está disponible ese día`, "warn");
-        return;
-    }
-    popTarget = { employeeId, date, cell };
-    renderPopoverOptions();
-    positionPopover(cell);
-}
+    const body = document.createElement("div");
+    body.className = "stack-2";
 
-function renderPopoverOptions() {
-    const container = document.getElementById("pop-options");
-    container.innerHTML = "";
+    const intro = document.createElement("p");
+    intro.className = "text-secondary";
+    intro.style.marginBottom = "var(--s-4)";
+    intro.textContent = `${employee ? employee.name : "Esta persona"} · ${formatDayLabel(date)}`;
+    body.appendChild(intro);
 
     currentShiftTemplates.forEach((shiftTemplate) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "pop-opt";
-
-        const sq = document.createElement("span");
-        sq.className = `sq ${shiftColorClass(shiftTemplate)}`;
-        button.appendChild(sq);
-
-        const label = document.createElement("span");
-        label.textContent = shiftTemplate.name;
-        button.appendChild(label);
-
-        const small = document.createElement("small");
-        small.className = "tnum";
-        small.textContent = formatSegmentsShort(shiftTemplate.segments);
-        button.appendChild(small);
-
-        button.addEventListener("click", () => applyAssignment(shiftTemplate.id));
-        container.appendChild(button);
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "btn btn--secondary btn--block";
+        option.textContent = `${shiftTemplate.name} · ${formatSegments(shiftTemplate.segments)}`;
+        if (shiftTemplate.id === currentValue) {
+            option.disabled = true;
+            option.textContent += " (actual)";
+        }
+        option.addEventListener("click", () => applyAssignment(employeeId, date, cell, shiftTemplate.id));
+        body.appendChild(option);
     });
 
-    const currentValue = assignmentsByEmployeeDate.get(popTarget.employeeId)?.get(popTarget.date);
     if (currentValue) {
-        const removeButton = document.createElement("button");
-        removeButton.type = "button";
-        removeButton.className = "pop-opt";
-
-        const sq = document.createElement("span");
-        sq.className = "sq x";
-        removeButton.appendChild(sq);
-
-        const label = document.createElement("span");
-        label.textContent = "Quitar";
-        removeButton.appendChild(label);
-
-        removeButton.addEventListener("click", () => applyAssignment(null));
-        container.appendChild(removeButton);
+        const clear = document.createElement("button");
+        clear.type = "button";
+        clear.className = "btn btn--secondary btn--block";
+        clear.textContent = "Dejar libre";
+        clear.addEventListener("click", () => applyAssignment(employeeId, date, cell, null));
+        body.appendChild(clear);
     }
-}
 
-function positionPopover(cell) {
-    const pop = document.getElementById("pop");
-    pop.classList.add("show");
-    pop.style.left = "0px";
-    pop.style.top = "0px";
-    const rect = cell.getBoundingClientRect();
-    const popWidth = pop.offsetWidth;
-    const popHeight = pop.offsetHeight;
-    let x = rect.left;
-    let y = rect.bottom + 6;
-    if (x + popWidth > window.innerWidth - 10) x = window.innerWidth - popWidth - 10;
-    if (y + popHeight > window.innerHeight - 10) y = rect.top - popHeight - 6;
-    pop.style.left = `${Math.max(10, x)}px`;
-    pop.style.top = `${Math.max(10, y)}px`;
-}
+    const actions = document.createElement("div");
+    actions.className = "row-end";
+    actions.style.marginTop = "var(--s-6)";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "btn btn--quiet";
+    cancel.textContent = "Cancelar";
+    cancel.addEventListener("click", closeModal);
+    actions.appendChild(cancel);
+    body.appendChild(actions);
 
-function closePopover() {
-    document.getElementById("pop").classList.remove("show");
-    popTarget = null;
+    openModal("Cambiar turno", body);
 }
 
 function setAssignmentState(employeeId, date, shiftTemplateId) {
@@ -420,19 +345,13 @@ function setAssignmentState(employeeId, date, shiftTemplateId) {
     }
 }
 
-function flagViolation(cell) {
-    cell.classList.add("violation");
-    setTimeout(() => cell.classList.remove("violation"), 2200);
-}
-
 /**
- * Revalida al vuelo contra PUT /api/schedules/{id}/assignments. Si rompe una
- * dura, el backend la rechaza (422): la celda se marca en rojo con el shake
- * y no se aplica ningún cambio local.
+ * Revalida al vuelo contra PUT /api/schedules/{id}/assignments. Si rompe una dura, el
+ * backend la rechaza con 422: la celda se marca en rojo un momento, se explica en el aviso
+ * de arriba y no se aplica ningún cambio.
  */
-async function applyAssignment(shiftTemplateId) {
-    const { employeeId, date, cell } = popTarget;
-    closePopover();
+async function applyAssignment(employeeId, date, cell, shiftTemplateId) {
+    closeModal();
     try {
         const result = await fetchJson(`/api/schedules/${currentScheduleId}/assignments`, {
             method: "PUT",
@@ -442,151 +361,120 @@ async function applyAssignment(shiftTemplateId) {
         setAssignmentState(employeeId, date, shiftTemplateId);
         renderGrid();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
-        showToast(hasWarnings ? result.softWarnings[0] : "Turno actualizado", hasWarnings ? "warn" : undefined);
+        setStatusMessage(hasWarnings ? result.softWarnings[0] : "Turno cambiado.", hasWarnings ? "warn" : "ok");
     } catch (error) {
-        flagViolation(cell);
-        showToast(error.message, "warn");
+        if (cell) {
+            cell.classList.add("rota-cell--rejected");
+            setTimeout(() => cell.classList.remove("rota-cell--rejected"), 2200);
+        }
+        setStatusMessage(error.message, "alert");
     }
 }
 
-/* ---------- paneles laterales ---------- */
+/* ---------- huecos de cobertura y equidad ---------- */
 
-function renderPanels() {
-    renderCoveragePanel();
-    renderEquityPanel();
-}
-
-function renderCoveragePanel() {
+function renderCoverage() {
+    const section = document.getElementById("coverage-section");
     const list = document.getElementById("coverage-list");
-    const pill = document.getElementById("coverage-pill");
-    list.innerHTML = "";
+    list.replaceChildren();
 
-    if (currentUncoveredSlots === null) {
-        pill.hidden = true;
-        appendPanelHint(list, "Los huecos de cobertura se calculan al generar; edítalos y vuelve a generar para verlos al día.");
+    if (!currentUncoveredSlots || currentUncoveredSlots.length === 0) {
+        section.hidden = true;
         return;
     }
-    if (currentUncoveredSlots.length === 0) {
-        pill.hidden = true;
-        appendPanelHint(list, "Cobertura completa.");
-        return;
-    }
-
-    pill.hidden = false;
-    pill.textContent = `${currentUncoveredSlots.length} hueco${currentUncoveredSlots.length === 1 ? "" : "s"}`;
+    section.hidden = false;
 
     currentUncoveredSlots.forEach((slot) => {
-        const shiftTemplate = currentShiftTemplates.find((t) => t.id === slot.shiftTemplateId);
-        const row = document.createElement("div");
-        row.className = "gap-row";
-
-        const badge = document.createElement("span");
-        badge.className = "gd";
-        badge.textContent = String(slot.missing);
-        row.appendChild(badge);
-
-        const text = document.createElement("span");
-        text.appendChild(document.createTextNode("Falta cubrir "));
-        const strong = document.createElement("b");
-        strong.textContent = `${slot.date}${shiftTemplate ? " · " + shiftTemplate.name : ""}`;
-        text.appendChild(strong);
-        row.appendChild(text);
-
-        const small = document.createElement("small");
-        small.textContent = "sin candidato";
-        row.appendChild(small);
-
-        list.appendChild(row);
+        const shiftTemplate = shiftTemplateById(slot.shiftTemplateId);
+        const people = slot.missing === 1 ? "1 persona" : `${slot.missing} personas`;
+        const item = document.createElement("p");
+        list.appendChild(item);
+        showNotice(item,
+            `${formatDayLabel(slot.date)}${shiftTemplate ? ", " + shiftTemplate.name : ""}: falta ${people} y no hay nadie que pueda cubrirlo sin saltarse el convenio.`,
+            "alert");
     });
 }
 
-function renderEquityPanel() {
+function renderEquity() {
+    const section = document.getElementById("equity-section");
     const list = document.getElementById("equity-list");
-    list.innerHTML = "";
+    list.replaceChildren();
 
-    if (currentEquityReport === null) {
-        appendPanelHint(list, "La equidad se calcula al generar; edítalos y vuelve a generar para verla al día.");
+    if (!currentEquityReport || currentEquityReport.length === 0) {
+        section.hidden = true;
         return;
     }
-    if (currentEquityReport.length === 0) {
-        appendPanelHint(list, "Sin datos de equidad para esta semana.");
-        return;
-    }
+    section.hidden = false;
 
-    const sorted = [...currentEquityReport].sort((a, b) => b.badShiftsThisWeek - a.badShiftsThisWeek);
-    const max = Math.max(...sorted.map((e) => e.badShiftsThisWeek), 1);
+    [...currentEquityReport]
+        .sort((a, b) => b.badShiftsThisWeek - a.badShiftsThisWeek)
+        .forEach((entry) => {
+            const employee = currentEmployees.find((e) => e.id === entry.employeeId);
+            const row = document.createElement("tr");
 
-    sorted.forEach((entry) => {
-        const employee = currentEmployees.find((e) => e.id === entry.employeeId);
-        const row = document.createElement("div");
-        row.className = "eq-row";
+            const nameCell = document.createElement("td");
+            const name = document.createElement("div");
+            name.className = "cell-title";
+            name.textContent = employee ? employee.name : `Empleado ${entry.employeeId}`;
+            nameCell.appendChild(name);
+            row.appendChild(nameCell);
 
-        const name = document.createElement("span");
-        name.textContent = employee ? employee.name.split(" ")[0] : `#${entry.employeeId}`;
-        row.appendChild(name);
+            const countCell = document.createElement("td");
+            countCell.className = "right";
+            countCell.textContent = String(entry.badShiftsThisWeek);
+            row.appendChild(countCell);
 
-        const bar = document.createElement("span");
-        bar.className = "eq-bar";
-        const fill = document.createElement("span");
-        fill.style.width = `${(entry.badShiftsThisWeek / max) * 100}%`;
-        bar.appendChild(fill);
-        row.appendChild(bar);
-
-        const val = document.createElement("span");
-        val.className = "val tnum";
-        val.textContent = String(entry.badShiftsThisWeek);
-        row.appendChild(val);
-
-        list.appendChild(row);
-    });
-}
-
-function appendPanelHint(list, message) {
-    const hint = document.createElement("p");
-    hint.className = "panel-empty";
-    hint.textContent = message;
-    list.appendChild(hint);
+            list.appendChild(row);
+        });
 }
 
 /* ---------- estado del tablero (vacío / con datos) ---------- */
 
-function renderTopbarActions() {
-    const generateButton = document.getElementById("generate-button");
+/**
+ * Un solo botón principal en pantalla: "Generar" mientras no hay cuadrante (dentro del
+ * estado vacío) y "Publicar" cuando hay un borrador. Publicado, solo queda imprimir.
+ */
+function renderActions() {
     const publishButton = document.getElementById("publish-button");
     const printButton = document.getElementById("print-button");
     const badge = document.getElementById("status-badge");
+    const mark = document.getElementById("status-mark");
 
     if (!currentScheduleStatus) {
-        generateButton.hidden = false;
         publishButton.hidden = true;
         printButton.hidden = true;
         badge.hidden = true;
         return;
     }
 
-    // Ya existe un cuadrante para esta semana: no hay endpoint para regenerarlo.
-    generateButton.hidden = true;
     printButton.hidden = false;
     badge.hidden = false;
-    badge.className = "badge " + (currentScheduleStatus === "PUBLISHED" ? "badge-pub" : "badge-draft");
-    document.getElementById("status-txt").textContent = currentScheduleStatus === "PUBLISHED" ? "Publicado" : "Borrador";
-    publishButton.hidden = currentScheduleStatus === "PUBLISHED";
+    if (currentScheduleStatus === "PUBLISHED") {
+        badge.className = "pill pill--ok";
+        mark.className = "mark mark--dot";
+        document.getElementById("status-txt").textContent = "Publicado";
+        publishButton.hidden = true;
+    } else {
+        badge.className = "pill pill--warn";
+        mark.className = "mark mark--bars";
+        document.getElementById("status-txt").textContent = "Borrador";
+        publishButton.hidden = false;
+    }
 }
 
 function showBoard() {
-    document.getElementById("board-body").style.display = "";
-    document.getElementById("empty-state").style.display = "none";
-    document.getElementById("board-sub").textContent =
-        `${currentEmployees.length} personas · ${currentShiftTemplates.length} turnos · pulsa una celda para editarla`;
-    renderTopbarActions();
+    document.getElementById("board-body").hidden = false;
+    document.getElementById("empty-state").hidden = true;
+    renderActions();
 }
 
 function showEmptyState() {
     currentScheduleId = null;
     currentScheduleStatus = null;
-    document.getElementById("board-body").style.display = "none";
-    document.getElementById("empty-state").style.display = "";
-    renderTopbarActions();
+    document.getElementById("board-body").hidden = true;
+    document.getElementById("empty-state").hidden = false;
+    document.getElementById("coverage-section").hidden = true;
+    renderActions();
 }
 
 async function applyState(data) {
@@ -608,6 +496,8 @@ async function applyState(data) {
     renderWeekLabel();
     renderHead();
     renderGrid();
+    renderCoverage();
+    renderEquity();
     showBoard();
 
     fetchJson(`/api/venues/${data.venueId}`)
@@ -624,7 +514,9 @@ async function loadExistingWeek() {
     const venueId = getVenueId();
     const isoYear = getIsoYear();
     const isoWeek = getIsoWeek();
-    if (!venueId || !isoYear || !isoWeek) return;
+    if (!venueId || !isoYear || !isoWeek) {
+        return;
+    }
 
     try {
         const { employees, shiftTemplates } = await loadReferenceData(venueId);
@@ -638,10 +530,13 @@ async function loadExistingWeek() {
             uncoveredSlots: null,
             equityReport: null
         });
+        setStatusMessage(null);
     } catch (error) {
         showEmptyState();
         if (error.message && error.message.startsWith("Venue no encontrado")) {
-            showToast(error.message, "warn");
+            setStatusMessage(error.message, "alert");
+        } else {
+            setStatusMessage(null);
         }
     }
 }
@@ -649,18 +544,20 @@ async function loadExistingWeek() {
 let generating = false;
 
 async function generateWeek() {
-    if (generating) return;
+    if (generating) {
+        return;
+    }
     const venueId = getVenueId();
     const isoYear = getIsoYear();
     const isoWeek = getIsoWeek();
     if (!venueId || !isoYear || !isoWeek) {
-        showToast("Indica venue, año y semana", "warn");
+        setStatusMessage("Indica la semana y el año.", "warn");
         return;
     }
 
     generating = true;
-    const buttons = [document.getElementById("generate-button"), document.getElementById("empty-generate-button")];
-    buttons.forEach((b) => { b.disabled = true; });
+    const button = document.getElementById("empty-generate-button");
+    button.disabled = true;
 
     try {
         const { employees, shiftTemplates } = await loadReferenceData(venueId);
@@ -678,32 +575,32 @@ async function generateWeek() {
             uncoveredSlots: response.uncoveredSlots,
             equityReport: response.equityReport
         });
-        showToast("Propuesta generada · revísala antes de publicar");
-        triggerFillingAnimation();
+        setStatusMessage("Propuesta generada. Revísala antes de publicarla.", "ok");
     } catch (error) {
-        showToast(error.message, "warn");
+        setStatusMessage(error.message, "alert");
     } finally {
-        buttons.forEach((b) => { b.disabled = false; });
+        button.disabled = false;
         generating = false;
     }
 }
 
 async function publishSchedule() {
-    if (!currentScheduleId) return;
+    if (!currentScheduleId) {
+        return;
+    }
     const button = document.getElementById("publish-button");
     button.disabled = true;
     try {
         const result = await fetchJson(`/api/schedules/${currentScheduleId}/publish`, { method: "POST" });
         currentScheduleStatus = result.status;
-        renderTopbarActions();
+        renderActions();
         renderGrid();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
-        showToast(
-            hasWarnings ? `Publicado con avisos: ${result.softWarnings[0]}` : "Cuadrante publicado · el equipo ha sido avisado",
-            hasWarnings ? "warn" : undefined
-        );
+        setStatusMessage(
+            hasWarnings ? `Cuadrante publicado, con un aviso: ${result.softWarnings[0]}` : "Cuadrante publicado.",
+            hasWarnings ? "warn" : "ok");
     } catch (error) {
-        showToast(error.message, "warn");
+        setStatusMessage(error.message, "alert");
     } finally {
         button.disabled = false;
     }
@@ -725,32 +622,26 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("iso-year-input").value = isoYear;
     document.getElementById("iso-week-input").value = isoWeek;
 
-    document.getElementById("iso-year-input").addEventListener("change", loadExistingWeek);
-    document.getElementById("iso-week-input").addEventListener("change", loadExistingWeek);
     document.getElementById("wk-prev").addEventListener("click", () => shiftWeek(-1));
     document.getElementById("wk-next").addEventListener("click", () => shiftWeek(1));
-    document.getElementById("generate-button").addEventListener("click", generateWeek);
     document.getElementById("empty-generate-button").addEventListener("click", generateWeek);
     document.getElementById("publish-button").addEventListener("click", publishSchedule);
     document.getElementById("print-button").addEventListener("click", () => {
-        closePopover();
+        closeModal();
         window.print();
     });
 
-    document.getElementById("schedule-body").addEventListener("click", (event) => {
-        const cell = event.target.closest("td.cell");
-        if (cell) {
-            openPopover(cell, Number(cell.dataset.employeeId), cell.dataset.date);
-        }
+    document.getElementById("week-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        loadExistingWeek();
     });
 
-    document.addEventListener("click", (event) => {
-        const pop = document.getElementById("pop");
-        if (pop.classList.contains("show") && !pop.contains(event.target) && !event.target.closest("td.cell")) {
-            closePopover();
+    document.getElementById("schedule-body").addEventListener("click", (event) => {
+        const cell = event.target.closest("button.rota-cell");
+        if (cell && !cell.disabled) {
+            openAssignmentModal(Number(cell.dataset.employeeId), cell.dataset.date, cell);
         }
     });
-    window.addEventListener("scroll", closePopover, true);
 
     fetchJson("/api/auth/me").then((me) => {
         if (me.role !== "MANAGER") {
@@ -759,5 +650,5 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         currentVenueId = me.venueId;
         loadExistingWeek();
-    }).catch((error) => showToast(error.message, "warn"));
+    }).catch((error) => setStatusMessage(error.message, "alert"));
 });

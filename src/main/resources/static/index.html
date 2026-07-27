@@ -6,95 +6,104 @@
     <title>RotaTeam · Cuadrante</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-    <div class="app">
-        <aside class="sidebar" id="shell-sidebar"></aside>
+    <div class="topbar" id="shell-topbar"></div>
 
-        <div class="main">
-            <div class="topbar">
-                <div class="week-nav">
-                    <button class="wk-btn" id="wk-prev" type="button" aria-label="Semana anterior">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                    </button>
-                    <div class="week-label">
-                        <span class="wk-h">
-                            Semana
-                            <input type="number" id="iso-week-input" min="1" max="53" class="wk-input wk-input-week" aria-label="Semana ISO">
-                            ·
-                            <input type="number" id="iso-year-input" min="2000" class="wk-input wk-input-year" aria-label="Año ISO">
-                        </span>
-                        <span class="wk-sub" id="wk-sub"></span>
-                    </div>
-                    <button class="wk-btn" id="wk-next" type="button" aria-label="Semana siguiente">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
-                    </button>
-                </div>
-
-                <span class="badge badge-draft" id="status-badge" hidden><span class="dot"></span><span id="status-txt">Borrador</span></span>
-
-                <div class="spring"></div>
-
-                <button class="btn btn-primary" id="generate-button" type="button">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
-                    Generar semana
-                </button>
-                <button class="btn btn-teal" id="publish-button" type="button" hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                    Publicar
-                </button>
-                <button class="btn btn-ghost" id="print-button" type="button" hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
-                    Imprimir / PDF
-                </button>
+    <main class="page stack-6">
+        <div class="row-between">
+            <div class="stack-2">
+                <h1>Cuadrante semanal</h1>
+                <p class="text-lead" id="board-sub">Elige una semana para verla o generarla.</p>
             </div>
-
-            <div class="content">
-                <div class="head">
-                    <div>
-                        <h1>Cuadrante semanal</h1>
-                        <p id="board-sub">Elige un venue y una semana para ver o generar su cuadrante.</p>
-                    </div>
-                </div>
-
-                <div id="print-header" class="print-header">
-                    <h1 id="print-title"></h1>
-                    <p id="print-subtitle"></p>
-                </div>
-
-                <div id="board-body" style="display:none">
-                    <div class="board-grid">
-                        <div class="table-wrap" id="table-wrap">
-                            <table class="grid" id="schedule-table">
-                                <thead><tr id="schedule-head-row"></tr></thead>
-                                <tbody id="schedule-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="empty-state" id="empty-state">
-                    <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
-                    <h2 id="empty-heading">Esta semana aún no tiene cuadrante</h2>
-                    <p>Genera una propuesta a partir de las preferencias del equipo y ajústala a mano antes de publicar.</p>
-                    <button class="btn btn-primary" id="empty-generate-button" type="button" style="margin:0 auto">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
-                        Generar semana
-                    </button>
-                </div>
+            <div class="row-actions no-print">
+                <button type="button" class="btn btn--secondary" id="print-button" hidden>Imprimir</button>
+                <button type="button" class="btn btn--primary" id="publish-button" hidden>Publicar</button>
             </div>
         </div>
-    </div>
 
-    <div class="pop" id="pop">
-        <div class="ph">Asignar turno</div>
-        <div id="pop-options"></div>
-    </div>
+        <!-- Cabecera que solo sale en el papel: en pantalla ya está en el h1 y en la barra. -->
+        <div class="print-only stack-2">
+            <h2 id="print-title"></h2>
+            <p class="text-secondary" id="print-subtitle"></p>
+        </div>
 
-    <script src="js/toast.js"></script>
+        <p id="status-message" class="notice" role="status" hidden></p>
+
+        <section class="surface stack-4 no-print">
+            <div class="row-between">
+                <h2>Qué semana</h2>
+                <span class="pill pill--off" id="status-badge" hidden>
+                    <span class="mark mark--ring" id="status-mark"></span>
+                    <span id="status-txt">Sin generar</span>
+                </span>
+            </div>
+
+            <form id="week-form">
+                <div class="field">
+                    <label class="label" for="iso-week-input">Semana del año</label>
+                    <input class="input" type="number" id="iso-week-input" min="1" max="53" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="iso-year-input">Año</label>
+                    <input class="input" type="number" id="iso-year-input" min="2000" required>
+                </div>
+                <div class="row-actions" style="margin-top:var(--s-5)">
+                    <button type="button" class="btn btn--secondary btn--sm" id="wk-prev">Semana anterior</button>
+                    <button type="button" class="btn btn--secondary btn--sm" id="wk-next">Semana siguiente</button>
+                    <button type="submit" class="btn btn--secondary btn--sm">Ver semana</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Los huecos sin cubrir van arriba del cuadrante, nunca escondidos en una fila. -->
+        <section class="stack-3" id="coverage-section" hidden>
+            <h2>Huecos sin cubrir</h2>
+            <div class="stack-3" id="coverage-list"></div>
+        </section>
+
+        <div id="board-body" hidden>
+            <section class="surface stack-4">
+                <h2 class="sr-only">Turnos de la semana</h2>
+                <div class="rota-wrap">
+                    <table class="rota" id="schedule-table">
+                        <thead><tr id="schedule-head-row"></tr></thead>
+                        <tbody id="schedule-body"></tbody>
+                    </table>
+                </div>
+                <p class="text-caption no-print" id="grid-hint">Pulsa una celda para cambiar el turno de esa persona ese día.</p>
+            </section>
+
+            <section class="surface stack-4 no-print" id="equity-section" style="margin-top:var(--s-6)" hidden>
+                <div class="stack-2">
+                    <h2>Reparto de turnos malos</h2>
+                    <p class="text-secondary">Noches de viernes y sábado, domingos y festivos, contando también las tres semanas anteriores.</p>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Persona</th>
+                            <th scope="col" class="right">Turnos malos esta semana</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equity-list"></tbody>
+                </table>
+            </section>
+        </div>
+
+        <section class="surface no-print" id="empty-state">
+            <div class="empty">
+                <h2>Esta semana aún no tiene cuadrante</h2>
+                <p>Genera una propuesta con las preferencias del equipo y ajústala a mano antes de publicar.</p>
+                <button type="button" class="btn btn--primary" id="empty-generate-button">Generar semana</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/notice.js"></script>
+    <script src="js/modal.js"></script>
     <script src="js/shell.js"></script>
     <script src="js/schedule.js"></script>
 </body>

@@ -276,6 +276,40 @@
     </div>
   </section>
 
+  <!-- REJILLA DEL CUADRANTE -->
+  <section class="demo">
+    <h3>Rejilla del cuadrante</h3>
+    <p class="text-caption">Dominio: solo RotaTeam. Los turnos se distinguen por su nombre y su horario, nunca por color. Cada celda es un botón real.</p>
+    <div class="surface">
+      <div class="rota-wrap">
+        <table class="rota">
+          <thead>
+            <tr>
+              <th scope="col">Persona</th>
+              <th scope="col">Lun 27</th>
+              <th scope="col">Mar 28</th>
+              <th scope="col">Mié 29</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Elena Ruiz</th>
+              <td><button class="rota-cell">MAÑANA<span class="rota-time">08:00–16:00</span></button></td>
+              <td><button class="rota-cell rota-cell--free">Libre</button></td>
+              <td><button class="rota-cell">PARTIDO<span class="rota-time">12:00–16:00 y 20:00–00:00</span></button></td>
+            </tr>
+            <tr>
+              <th scope="row">Marco Gil</th>
+              <td><button class="rota-cell rota-cell--off" disabled>No disponible</button></td>
+              <td><button class="rota-cell">TARDE<span class="rota-time">16:00–00:00</span></button></td>
+              <td><button class="rota-cell rota-cell--rejected">TARDE<span class="rota-time">16:00–00:00</span></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- TIMELINE -->
   <section class="demo">
     <h3>Línea de tiempo</h3>
