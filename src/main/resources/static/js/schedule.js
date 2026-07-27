@@ -19,6 +19,7 @@ let currentEquityReport = null;
  * publicado. Se apaga al recargar la semana, para que no quede abierto sin querer.
  */
 let lastMinuteMode = false;
+let currentVenueName = "";
 
 /** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
 function csrfToken() {
@@ -454,6 +455,7 @@ function renderActions() {
     const printButton = document.getElementById("print-button");
     const lastMinuteButton = document.getElementById("lastminute-button");
     const notifyButton = document.getElementById("notify-button");
+    const whatsappButton = document.getElementById("whatsapp-button");
     const badge = document.getElementById("status-badge");
     const mark = document.getElementById("status-mark");
 
@@ -462,14 +464,16 @@ function renderActions() {
         printButton.hidden = true;
         lastMinuteButton.hidden = true;
         notifyButton.hidden = true;
+        whatsappButton.hidden = true;
         badge.hidden = true;
         return;
     }
 
     printButton.hidden = false;
     badge.hidden = false;
-    // Solo se avisa de un cuadrante publicado: un borrador todavía no es nada para el equipo.
+    // Solo se comparte un cuadrante publicado: un borrador todavía no es nada para el equipo.
     notifyButton.hidden = currentScheduleStatus !== "PUBLISHED";
+    whatsappButton.hidden = currentScheduleStatus !== "PUBLISHED";
     notifyButton.textContent = lastMinuteMode ? "Avisar del cambio" : "Avisar al equipo";
     if (currentScheduleStatus === "PUBLISHED") {
         badge.className = "pill pill--ok";
@@ -525,6 +529,41 @@ function notifyTeam() {
                 button.disabled = false;
             }
         });
+}
+
+/**
+ * Redacta el cuadrante de la semana en texto plano y abre WhatsApp con el mensaje ya
+ * escrito, para que el encargado lo pegue él en el grupo de un toque.
+ *
+ * No se publica solo en el grupo, y no por falta de ganas: ninguna API oficial de WhatsApp
+ * permite que una aplicación escriba en un grupo normal. Ver la decisión en CLAUDE.md.
+ */
+function whatsappSummary() {
+    const lines = [];
+    lines.push(`Cuadrante de la semana ${currentIsoWeek}${currentVenueName ? " · " + currentVenueName : ""}`);
+    lines.push(formatDateRangeLabel(currentDays));
+    lines.push("");
+
+    currentDays.forEach((day) => {
+        const shifts = [];
+        currentEmployees.forEach((employee) => {
+            const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date);
+            if (shiftTemplateId) {
+                const shiftTemplate = shiftTemplateById(shiftTemplateId);
+                shifts.push(`- ${employee.name}: ${shiftTemplate.name} ${formatSegments(shiftTemplate.segments)}`);
+            }
+        });
+        lines.push(day.label);
+        lines.push(shifts.length > 0 ? shifts.join("\n") : "- Nadie asignado");
+        lines.push("");
+    });
+
+    return lines.join("\n").trim();
+}
+
+function shareOnWhatsApp() {
+    // wa.me abre la app con el texto puesto; enviarlo lo decide y lo hace el encargado.
+    window.open(`https://wa.me/?text=${encodeURIComponent(whatsappSummary())}`, "_blank", "noopener");
 }
 
 function describeNotifyResult(result) {
@@ -592,6 +631,7 @@ async function applyState(data) {
 
     fetchJson(`/api/venues/${data.venueId}`)
         .then((venue) => {
+            currentVenueName = venue.name;
             if (window.updateShellVenueName) window.updateShellVenueName(venue.name);
             document.getElementById("print-title").textContent = venue.name;
         })
@@ -721,6 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("publish-button").addEventListener("click", publishSchedule);
     document.getElementById("lastminute-button").addEventListener("click", toggleLastMinuteMode);
     document.getElementById("notify-button").addEventListener("click", notifyTeam);
+    document.getElementById("whatsapp-button").addEventListener("click", shareOnWhatsApp);
     document.getElementById("print-button").addEventListener("click", () => {
         closeModal();
         window.print();
