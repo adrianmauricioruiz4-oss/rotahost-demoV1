@@ -37,6 +37,7 @@ async function fetchJson(url, options) {
 }
 
 let currentVenueId = null;
+let fieldSeq = 0;
 
 /** "08:00:00" -> "08:00" (formato que aceptan los <input type="time">). */
 function toTimeInputValue(localTime) {
@@ -44,14 +45,25 @@ function toTimeInputValue(localTime) {
 }
 
 function setStatusMessage(message, isError) {
-    const el = document.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
-        return;
-    }
-    el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
-    el.hidden = false;
+    showNotice("status-message", message, isError ? "alert" : "ok");
+}
+
+/** Campo con su label asociado por id, como exige la accesibilidad mínima de DESIGN.md. */
+function buildField(labelText, control) {
+    const field = document.createElement("div");
+    field.className = "field";
+
+    fieldSeq += 1;
+    control.id = `shift-field-${fieldSeq}`;
+
+    const label = document.createElement("label");
+    label.className = "label";
+    label.htmlFor = control.id;
+    label.textContent = labelText;
+
+    field.appendChild(label);
+    field.appendChild(control);
+    return field;
 }
 
 async function loadVenue(venueId) {
@@ -64,67 +76,114 @@ async function loadVenue(venueId) {
 
 async function loadShiftTemplates(venueId) {
     const shiftTemplates = await fetchJson("/api/shift-templates");
-    const venueTemplates = shiftTemplates.filter((t) => t.venueId === venueId);
-    renderShiftTemplates(venueTemplates, venueId);
+    renderShiftTemplates(shiftTemplates.filter((t) => t.venueId === venueId), venueId);
+}
+
+/** "08:00–16:00 y 20:00–00:00" — todos los tramos del turno en una línea. */
+function segmentsLine(template) {
+    return template.segments
+        .map((segment) => `${toTimeInputValue(segment.startTime)}–${toTimeInputValue(segment.endTime)}`)
+        .join(" y ");
 }
 
 function renderShiftTemplates(templates, venueId) {
     const list = document.getElementById("shift-templates-list");
     const empty = document.getElementById("shift-templates-empty");
-    list.innerHTML = "";
+    const table = document.getElementById("shift-templates-table");
+    list.replaceChildren();
 
-    if (templates.length === 0) {
-        empty.hidden = false;
+    const isEmpty = templates.length === 0;
+    empty.hidden = !isEmpty;
+    table.hidden = isEmpty;
+    if (isEmpty) {
         return;
     }
-    empty.hidden = true;
-
-    templates.forEach((template) => {
-        list.appendChild(buildShiftTemplateCard(template, venueId));
-    });
+    templates.forEach((template) => list.appendChild(buildShiftTemplateRow(template, venueId)));
 }
 
-function buildShiftTemplateCard(template, venueId) {
-    const card = document.createElement("form");
-    card.className = "shift-template-card generate-form";
+/** El nombre del turno lo escribe el encargado: se inserta con textContent, nunca como HTML. */
+function buildShiftTemplateRow(template, venueId) {
+    const row = document.createElement("tr");
 
-    const nameLabel = document.createElement("label");
-    nameLabel.textContent = "Nombre";
+    const nameCell = document.createElement("td");
+    const name = document.createElement("div");
+    name.className = "cell-title";
+    name.textContent = template.name;
+    nameCell.appendChild(name);
+    row.appendChild(nameCell);
+
+    const scheduleCell = document.createElement("td");
+    scheduleCell.textContent = segmentsLine(template);
+    row.appendChild(scheduleCell);
+
+    const actionsCell = document.createElement("td");
+    actionsCell.className = "right";
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "btn btn--secondary btn--sm";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => openShiftTemplateForm(template, venueId));
+    actions.appendChild(editButton);
+
+    actionsCell.appendChild(actions);
+    row.appendChild(actionsCell);
+    return row;
+}
+
+/** Edita el nombre y las horas de cada tramo del turno. El número de tramos no cambia aquí. */
+function openShiftTemplateForm(template, venueId) {
+    const form = document.createElement("form");
+
     const nameInput = document.createElement("input");
+    nameInput.className = "input";
     nameInput.type = "text";
     nameInput.required = true;
     nameInput.value = template.name;
-    nameLabel.appendChild(nameInput);
-    card.appendChild(nameLabel);
+    form.appendChild(buildField("Nombre del turno", nameInput));
 
+    const single = template.segments.length === 1;
     const segmentInputs = template.segments.map((segment, index) => {
-        const startLabel = document.createElement("label");
-        startLabel.textContent = `Tramo ${index + 1} — inicio`;
+        const suffix = single ? "" : ` del tramo ${index + 1}`;
+
         const startInput = document.createElement("input");
+        startInput.className = "input";
         startInput.type = "time";
         startInput.required = true;
         startInput.value = toTimeInputValue(segment.startTime);
-        startLabel.appendChild(startInput);
+        form.appendChild(buildField(`Hora de entrada${suffix}`, startInput));
 
-        const endLabel = document.createElement("label");
-        endLabel.textContent = `Tramo ${index + 1} — fin`;
         const endInput = document.createElement("input");
+        endInput.className = "input";
         endInput.type = "time";
         endInput.required = true;
         endInput.value = toTimeInputValue(segment.endTime);
-        endLabel.appendChild(endInput);
+        form.appendChild(buildField(`Hora de salida${suffix}`, endInput));
 
-        card.appendChild(startLabel);
-        card.appendChild(endLabel);
         return { startInput, endInput };
     });
 
+    const actions = document.createElement("div");
+    actions.className = "row-end";
+    actions.style.marginTop = "var(--s-6)";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "btn btn--secondary";
+    cancelButton.textContent = "Cancelar";
+    cancelButton.addEventListener("click", closeModal);
+    actions.appendChild(cancelButton);
+
     const saveButton = document.createElement("button");
     saveButton.type = "submit";
+    saveButton.className = "btn btn--primary";
     saveButton.textContent = "Guardar";
-    card.appendChild(saveButton);
+    actions.appendChild(saveButton);
+    form.appendChild(actions);
 
-    card.addEventListener("submit", async (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const body = {
             name: nameInput.value,
@@ -140,13 +199,15 @@ function buildShiftTemplateCard(template, venueId) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
             });
-            setStatusMessage(`Turno "${nameInput.value}" actualizado.`, false);
+            closeModal();
+            setStatusMessage(`Turno ${nameInput.value} actualizado.`, false);
+            await loadShiftTemplates(venueId);
         } catch (error) {
             setStatusMessage(error.message, true);
         }
     });
 
-    return card;
+    openModal("Editar turno", form);
 }
 
 async function loadVenueAndShifts(venueId) {
@@ -170,6 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(body)
             });
             setStatusMessage("Horario del local actualizado.", false);
+            if (typeof window.updateShellVenueName === "function") {
+                window.updateShellVenueName(body.name);
+            }
         } catch (error) {
             setStatusMessage(error.message, true);
         }
