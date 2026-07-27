@@ -222,7 +222,7 @@ class ScheduleServiceTest {
         ShiftAssignment existing = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
         ReflectionTestUtils.setField(existing, "id", 500L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 101L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 101L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
@@ -256,7 +256,7 @@ class ScheduleServiceTest {
         ShiftAssignment existing = new ShiftAssignment(employee, manana, schedule, LocalDate.of(2026, 7, 13));
         ReflectionTestUtils.setField(existing, "id", 500L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), null);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), null, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
@@ -280,7 +280,7 @@ class ScheduleServiceTest {
         Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(employee, "id", 10L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
@@ -305,7 +305,7 @@ class ScheduleServiceTest {
         Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(employee, "id", 10L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
@@ -332,7 +332,7 @@ class ScheduleServiceTest {
         Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
         ReflectionTestUtils.setField(employee, "id", 10L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
@@ -353,22 +353,81 @@ class ScheduleServiceTest {
     }
 
     @Test
-    void editAssignmentRejectsWhenScheduleIsNotDraft() {
+    void editAssignmentRejectsAnOrdinaryEditOnAPublishedSchedule() {
         Schedule schedule = draftSchedule(2026, 29);
         schedule.setStatus(ScheduleStatus.PUBLISHED);
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
 
         assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("DRAFT");
+                .hasMessageContaining("Cambios de última hora");
+    }
+
+    /**
+     * El imprevisto de verdad: el cuadrante está publicado, el equipo ya lo ha visto, y el
+     * encargado tiene que mover un turno. Se deja, pero solo por la puerta marcada.
+     */
+    @Test
+    void editAssignmentAllowsALastMinuteChangeOnAPublishedSchedule() {
+        Schedule schedule = draftSchedule(2026, 29);
+        schedule.setStatus(ScheduleStatus.PUBLISHED);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, true);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(manana));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(List.of());
+        when(shiftAssignmentRepository.save(any(ShiftAssignment.class))).thenAnswer(invocation -> {
+            ShiftAssignment saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 600L);
+            return saved;
+        });
+
+        AssignmentEditResponse response = scheduleService.editAssignment(900L, request);
+
+        assertThat(response.assignment()).isNotNull();
+        assertThat(response.assignment().shiftTemplateId()).isEqualTo(100L);
+    }
+
+    /** La prisa no levanta el convenio: una dura sigue rechazando el cambio. */
+    @Test
+    void aLastMinuteChangeStillCannotBreakAHardConstraint() {
+        Schedule schedule = draftSchedule(2026, 29);
+        schedule.setStatus(ScheduleStatus.PUBLISHED);
+        Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, venue);
+        ReflectionTestUtils.setField(employee, "id", 10L);
+
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, true);
+
+        when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
+        when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));
+        when(shiftTemplateRepository.findById(100L)).thenReturn(Optional.of(manana));
+        when(shiftAssignmentRepository.findByScheduleId(900L)).thenReturn(List.of());
+        when(employeeRepository.findByVenueIdAndActiveTrue(1L)).thenReturn(List.of(employee));
+        when(preferenceRepository.findByEmployeeIdIn(List.of(10L))).thenReturn(List.of());
+        when(coverageRequirementRepository.findByVenueId(1L)).thenReturn(List.of());
+        when(scheduleValidator.validate(anyList(), anyList(), anyList(), any())).thenReturn(
+                List.of(new ConstraintViolation("H1", Severity.HARD, "descanso de 12h", 10L, LocalDate.of(2026, 7, 13))));
+
+        assertThatThrownBy(() -> scheduleService.editAssignment(900L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("restricciones duras");
+        verify(shiftAssignmentRepository, never()).save(any(ShiftAssignment.class));
     }
 
     @Test
     void editAssignmentRejectsWhenDateIsOutsideTheScheduleWeek() {
         Schedule schedule = draftSchedule(2026, 29);
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 20), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 20), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
 
@@ -385,7 +444,7 @@ class ScheduleServiceTest {
         Employee employee = new Employee("Ana", "ana@test.com", ContractType.FULL_TIME, null, otherVenue);
         ReflectionTestUtils.setField(employee, "id", 10L);
 
-        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L);
+        EditAssignmentRequest request = new EditAssignmentRequest(10L, LocalDate.of(2026, 7, 13), 100L, false);
 
         when(scheduleRepository.findById(900L)).thenReturn(Optional.of(schedule));
         when(employeeRepository.findById(10L)).thenReturn(Optional.of(employee));

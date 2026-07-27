@@ -14,6 +14,11 @@ let unavailableSet = new Set();
 /** null = no se han recalculado desde la última vez que se generó (ver GET /api/schedules). */
 let currentUncoveredSlots = null;
 let currentEquityReport = null;
+/**
+ * Modo "cambios de última hora": el encargado ha pedido expresamente tocar un cuadrante ya
+ * publicado. Se apaga al recargar la semana, para que no quede abierto sin querer.
+ */
+let lastMinuteMode = false;
 
 /** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
 function csrfToken() {
@@ -249,8 +254,8 @@ function buildCell(employee, day) {
             `${employee.name}, ${day.label}: ${shiftTemplate.name}, ${formatSegments(shiftTemplate.segments)}. Cambiar turno`);
     }
 
-    // Un cuadrante publicado no se toca desde aquí; se edita con "Cambios de última hora".
-    button.disabled = currentScheduleStatus === "PUBLISHED";
+    // Un cuadrante publicado está bloqueado salvo que se haya pedido el modo de última hora.
+    button.disabled = currentScheduleStatus === "PUBLISHED" && !lastMinuteMode;
     return button;
 }
 
@@ -275,7 +280,11 @@ function renderGrid() {
         body.appendChild(row);
     });
 
-    document.getElementById("grid-hint").hidden = currentScheduleStatus === "PUBLISHED";
+    const hint = document.getElementById("grid-hint");
+    hint.hidden = currentScheduleStatus === "PUBLISHED" && !lastMinuteMode;
+    hint.textContent = lastMinuteMode
+        ? "Pulsa una celda para cambiar el turno. Se comprueba el convenio igual que en un borrador."
+        : "Pulsa una celda para cambiar el turno de esa persona ese día.";
 }
 
 /* ---------- edición de una asignación ---------- */
@@ -356,12 +365,18 @@ async function applyAssignment(employeeId, date, cell, shiftTemplateId) {
         const result = await fetchJson(`/api/schedules/${currentScheduleId}/assignments`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ employeeId, date, shiftTemplateId })
+            body: JSON.stringify({ employeeId, date, shiftTemplateId, lastMinute: lastMinuteMode })
         });
         setAssignmentState(employeeId, date, shiftTemplateId);
         renderGrid();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
-        setStatusMessage(hasWarnings ? result.softWarnings[0] : "Turno cambiado.", hasWarnings ? "warn" : "ok");
+        if (hasWarnings) {
+            setStatusMessage(result.softWarnings[0], "warn");
+        } else if (lastMinuteMode) {
+            setStatusMessage("Turno cambiado sobre el cuadrante publicado. Avisa al equipo del cambio.", "ok");
+        } else {
+            setStatusMessage("Turno cambiado.", "ok");
+        }
     } catch (error) {
         if (cell) {
             cell.classList.add("rota-cell--rejected");
@@ -437,12 +452,14 @@ function renderEquity() {
 function renderActions() {
     const publishButton = document.getElementById("publish-button");
     const printButton = document.getElementById("print-button");
+    const lastMinuteButton = document.getElementById("lastminute-button");
     const badge = document.getElementById("status-badge");
     const mark = document.getElementById("status-mark");
 
     if (!currentScheduleStatus) {
         publishButton.hidden = true;
         printButton.hidden = true;
+        lastMinuteButton.hidden = true;
         badge.hidden = true;
         return;
     }
@@ -452,14 +469,33 @@ function renderActions() {
     if (currentScheduleStatus === "PUBLISHED") {
         badge.className = "pill pill--ok";
         mark.className = "mark mark--dot";
-        document.getElementById("status-txt").textContent = "Publicado";
+        document.getElementById("status-txt").textContent = lastMinuteMode ? "Publicado · editando" : "Publicado";
         publishButton.hidden = true;
+        lastMinuteButton.hidden = false;
+        lastMinuteButton.textContent = lastMinuteMode ? "Dejar de editar" : "Cambios de última hora";
     } else {
         badge.className = "pill pill--warn";
         mark.className = "mark mark--bars";
         document.getElementById("status-txt").textContent = "Borrador";
         publishButton.hidden = false;
+        lastMinuteButton.hidden = true;
     }
+}
+
+/**
+ * Abre o cierra la edición de un cuadrante ya publicado. Es una acción aparte y no un modo
+ * que se herede: el equipo ya ha visto ese cuadrante, así que tocarlo tiene que ser algo que
+ * el encargado pide a propósito cada vez.
+ */
+function toggleLastMinuteMode() {
+    lastMinuteMode = !lastMinuteMode;
+    renderActions();
+    renderGrid();
+    setStatusMessage(
+        lastMinuteMode
+            ? "Estás editando un cuadrante publicado. Los cambios se guardan al momento y el equipo no se entera solo."
+            : null,
+        "warn");
 }
 
 function showBoard() {
@@ -478,6 +514,8 @@ function showEmptyState() {
 }
 
 async function applyState(data) {
+    // Cargar una semana cierra siempre el modo de última hora: no se hereda de la anterior.
+    lastMinuteMode = false;
     currentVenueId = data.venueId;
     currentIsoYear = data.isoYear;
     currentIsoWeek = data.isoWeek;
@@ -626,6 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("wk-next").addEventListener("click", () => shiftWeek(1));
     document.getElementById("empty-generate-button").addEventListener("click", generateWeek);
     document.getElementById("publish-button").addEventListener("click", publishSchedule);
+    document.getElementById("lastminute-button").addEventListener("click", toggleLastMinuteMode);
     document.getElementById("print-button").addEventListener("click", () => {
         closeModal();
         window.print();

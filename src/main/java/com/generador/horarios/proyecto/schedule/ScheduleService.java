@@ -142,18 +142,24 @@ public class ScheduleService {
 
     /**
      * Cambia (o quita, si shiftTemplateId es null) la asignación de un empleado en una
-     * fecha concreta de un cuadrante DRAFT, revalidando siempre la semana entera antes
-     * de persistir (sección 6 del CLAUDE.md): si el cambio provoca una dura, no se
-     * guarda nada y se informa de qué regla se rompe. Las blandas (ej. cobertura, H7)
-     * no bloquean, se devuelven como aviso.
+     * fecha concreta, revalidando siempre la semana entera antes de persistir (sección 6
+     * del CLAUDE.md): si el cambio provoca una dura, no se guarda nada y se informa de qué
+     * regla se rompe. Las blandas (ej. cobertura, H7) no bloquean, se devuelven como aviso.
+     *
+     * <p>Un cuadrante PUBLISHED sigue bloqueado a la edición normal (T3.4). Solo se deja
+     * tocar cuando la petición viene marcada como cambio de última hora, que es el camino
+     * explícito del encargado para un imprevisto sobre algo que el equipo ya ha visto. Las
+     * restricciones duras se comprueban igual: la prisa no levanta el convenio.
      */
     @Transactional
     public AssignmentEditResponse editAssignment(Long scheduleId, EditAssignmentRequest request) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Schedule no encontrado: " + scheduleId));
-        if (schedule.getStatus() != ScheduleStatus.DRAFT) {
+        boolean editable = schedule.getStatus() == ScheduleStatus.DRAFT
+                || (schedule.getStatus() == ScheduleStatus.PUBLISHED && request.isLastMinute());
+        if (!editable) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Solo se puede editar un cuadrante en DRAFT (actual: " + schedule.getStatus() + ")");
+                    "Este cuadrante ya está publicado. Usa \"Cambios de última hora\" para modificarlo.");
         }
 
         LocalDate weekStart = deriveWeekStart(schedule.getIsoYear(), schedule.getIsoWeek());
