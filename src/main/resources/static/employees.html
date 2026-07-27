@@ -6,39 +6,47 @@
     <title>RotaTeam · Empleados</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-    <div class="app">
-        <aside class="sidebar" id="shell-sidebar"></aside>
+    <div class="topbar" id="shell-topbar"></div>
 
-        <div class="main">
-            <div class="topbar">
-                <h1 class="dash-title">Empleados</h1>
-                <div class="spring"></div>
+    <main class="page stack-6">
+        <div class="row-between">
+            <div class="stack-2">
+                <h1>Empleados</h1>
+                <p class="text-lead">Quién trabaja en el local, con qué contrato y en qué puesto.</p>
             </div>
-
-            <main class="dash-main">
-                <p id="status-message" class="status-message" hidden></p>
-
-                <section class="settings-section">
-                    <details class="new-employee-details">
-                        <summary><span class="plus-icon">+</span> Añadir empleado</summary>
-                        <form id="new-employee-form" class="employee-card"></form>
-                    </details>
-                </section>
-
-                <section class="settings-section">
-                    <h2>Equipo</h2>
-                    <p id="employees-empty" hidden>Todavía no hay empleados en este venue.</p>
-                    <div id="employees-list"></div>
-                </section>
-            </main>
+            <button type="button" class="btn btn--primary" id="new-employee-button">Añadir empleado</button>
         </div>
-    </div>
 
+        <p id="status-message" class="notice" role="status" hidden></p>
+
+        <section class="surface stack-4">
+            <h2>Equipo</h2>
+
+            <table class="table" id="employees-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Empleado</th>
+                        <th scope="col">Contrato</th>
+                        <th scope="col">Puestos</th>
+                        <th scope="col" class="right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="employees-list"></tbody>
+            </table>
+
+            <div class="empty" id="employees-empty" hidden>
+                <h3>Todavía no hay nadie dado de alta</h3>
+                <p>Añade a tu equipo para poder generar cuadrantes.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/notice.js"></script>
+    <script src="js/modal.js"></script>
     <script src="js/shell.js"></script>
     <script src="js/employees.js"></script>
 </body>

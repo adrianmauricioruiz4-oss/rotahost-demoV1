@@ -46,16 +46,10 @@ const POSITION_LABELS = {
 };
 
 let currentVenueId = null;
+let fieldSeq = 0;
 
 function setStatusMessage(message, isError) {
-    const el = document.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
-        return;
-    }
-    el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
-    el.hidden = false;
+    showNotice("status-message", message, isError ? "alert" : "ok");
 }
 
 /** "08:00:00"/null -> "08:00"/"" (formato que aceptan los <input type="time">). */
@@ -63,118 +57,155 @@ function toTimeInputValue(localTime) {
     return localTime ? localTime.slice(0, 5) : "";
 }
 
+/** Campo con su label asociado por id, como exige la accesibilidad mínima de DESIGN.md. */
+function buildField(labelText, control, hintText) {
+    const field = document.createElement("div");
+    field.className = "field";
+
+    fieldSeq += 1;
+    control.id = `emp-field-${fieldSeq}`;
+
+    const label = document.createElement("label");
+    label.className = "label";
+    label.htmlFor = control.id;
+    label.textContent = labelText;
+
+    field.appendChild(label);
+    field.appendChild(control);
+
+    if (hintText) {
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = hintText;
+        field.appendChild(hint);
+    }
+    return field;
+}
+
+function buildCheck(text, checked) {
+    const label = document.createElement("label");
+    label.className = "check";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.defaultChecked = checked;
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(text));
+    return { label, checkbox };
+}
+
+function buildCheckGroup(legendText, entries) {
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "fieldset field";
+
+    const legend = document.createElement("legend");
+    legend.textContent = legendText;
+    fieldset.appendChild(legend);
+
+    const checkboxes = entries.map((entry) => {
+        const { label, checkbox } = buildCheck(entry.label, entry.checked);
+        checkbox.value = entry.value || "";
+        fieldset.appendChild(label);
+        return checkbox;
+    });
+    return { fieldset, checkboxes };
+}
+
 /**
- * Construye el formulario de alta/edición. employee es null para el alta; con datos, para editar.
- * onSubmit recibe el body ya listo para POST/PUT.
+ * Construye la ficha de alta/edición para abrirla en un modal. employee es null para el
+ * alta; con datos, para editar. onSubmit recibe el body ya listo para POST/PUT.
  */
 function buildEmployeeForm(employee, submitLabel, onSubmit) {
     const form = document.createElement("form");
-    form.className = "employee-card generate-form";
 
-    const nameLabel = document.createElement("label");
-    nameLabel.textContent = "Nombre";
     const nameInput = document.createElement("input");
+    nameInput.className = "input";
     nameInput.type = "text";
     nameInput.required = true;
     nameInput.value = employee ? employee.name : "";
-    nameLabel.appendChild(nameInput);
-    form.appendChild(nameLabel);
+    form.appendChild(buildField("Nombre", nameInput));
 
-    const emailLabel = document.createElement("label");
-    emailLabel.textContent = "Email";
     const emailInput = document.createElement("input");
+    emailInput.className = "input";
     emailInput.type = "email";
     emailInput.required = true;
     emailInput.value = employee ? employee.email : "";
-    emailLabel.appendChild(emailInput);
-    form.appendChild(emailLabel);
+    form.appendChild(buildField("Correo electrónico", emailInput));
 
-    const contractLabel = document.createElement("label");
-    contractLabel.textContent = "Contrato";
     const contractSelect = document.createElement("select");
-    ["FULL_TIME", "PART_TIME"].forEach((value) => {
+    contractSelect.className = "select";
+    [["FULL_TIME", "Jornada completa"], ["PART_TIME", "Parcial"]].forEach(([value, label]) => {
         const option = document.createElement("option");
         option.value = value;
-        option.textContent = value === "FULL_TIME" ? "Jornada completa" : "Parcial";
+        option.textContent = label;
         contractSelect.appendChild(option);
     });
     contractSelect.value = employee ? employee.contractType : "FULL_TIME";
-    contractLabel.appendChild(contractSelect);
-    form.appendChild(contractLabel);
+    form.appendChild(buildField("Contrato", contractSelect));
 
-    const hoursLabel = document.createElement("label");
-    hoursLabel.textContent = "Horas/semana";
     const hoursInput = document.createElement("input");
+    hoursInput.className = "input";
     hoursInput.type = "number";
     hoursInput.min = "1";
     hoursInput.value = employee && employee.contractHours ? employee.contractHours : "";
-    hoursLabel.appendChild(hoursInput);
-    form.appendChild(hoursLabel);
+    const hoursField = buildField("Horas por semana", hoursInput, "Según el contrato vigente");
+    form.appendChild(hoursField);
 
     function updateHoursVisibility() {
-        hoursLabel.hidden = contractSelect.value !== "PART_TIME";
+        hoursField.hidden = contractSelect.value !== "PART_TIME";
     }
     contractSelect.addEventListener("change", updateHoursVisibility);
     updateHoursVisibility();
 
-    const positionsFieldset = document.createElement("fieldset");
-    const positionsLegend = document.createElement("legend");
-    positionsLegend.textContent = "Puestos";
-    positionsFieldset.appendChild(positionsLegend);
     const employeePositions = new Set(employee ? employee.positions : []);
-    const positionCheckboxes = Object.entries(POSITION_LABELS).map(([value, label]) => {
-        const checkboxLabel = document.createElement("label");
-        checkboxLabel.className = "checkbox-label";
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.value = value;
-        checkbox.defaultChecked = employeePositions.has(value);
-        checkboxLabel.appendChild(checkbox);
-        checkboxLabel.appendChild(document.createTextNode(label));
-        positionsFieldset.appendChild(checkboxLabel);
-        return checkbox;
-    });
-    form.appendChild(positionsFieldset);
+    const positions = buildCheckGroup("Puestos", Object.entries(POSITION_LABELS).map(([value, label]) => ({
+        value,
+        label,
+        checked: employeePositions.has(value)
+    })));
+    form.appendChild(positions.fieldset);
 
-    const capabilitiesFieldset = document.createElement("fieldset");
-    const capabilitiesLegend = document.createElement("legend");
-    capabilitiesLegend.textContent = "Capacidades";
-    capabilitiesFieldset.appendChild(capabilitiesLegend);
-    const splitShiftCheckbox = buildCapabilityCheckbox(
-        capabilitiesFieldset, "Puede turno partido", employee ? employee.canWorkSplitShift : true);
-    const openCheckbox = buildCapabilityCheckbox(
-        capabilitiesFieldset, "Puede apertura", employee ? employee.canOpen : true);
-    const closeCheckbox = buildCapabilityCheckbox(
-        capabilitiesFieldset, "Puede cierre", employee ? employee.canClose : true);
-    form.appendChild(capabilitiesFieldset);
+    const capabilities = buildCheckGroup("Capacidades", [
+        { label: "Puede hacer turno partido", checked: employee ? employee.canWorkSplitShift : true },
+        { label: "Puede abrir el local", checked: employee ? employee.canOpen : true },
+        { label: "Puede cerrar el local", checked: employee ? employee.canClose : true }
+    ]);
+    form.appendChild(capabilities.fieldset);
+    const [splitShiftCheckbox, openCheckbox, closeCheckbox] = capabilities.checkboxes;
 
-    const minEntryLabel = document.createElement("label");
-    minEntryLabel.textContent = "Hora mínima de entrada";
     const minEntryInput = document.createElement("input");
+    minEntryInput.className = "input";
     minEntryInput.type = "time";
     minEntryInput.value = employee ? toTimeInputValue(employee.minEntryTime) : "";
-    minEntryLabel.appendChild(minEntryInput);
-    form.appendChild(minEntryLabel);
+    form.appendChild(buildField("Hora mínima de entrada", minEntryInput));
 
-    const maxExitLabel = document.createElement("label");
-    maxExitLabel.textContent = "Hora máxima de salida";
     const maxExitInput = document.createElement("input");
+    maxExitInput.className = "input";
     maxExitInput.type = "time";
     maxExitInput.value = employee ? toTimeInputValue(employee.maxExitTime) : "";
-    maxExitLabel.appendChild(maxExitInput);
-    form.appendChild(maxExitLabel);
+    form.appendChild(buildField("Hora máxima de salida", maxExitInput));
 
-    const notesLabel = document.createElement("label");
-    notesLabel.textContent = "Notas internas";
     const notesInput = document.createElement("textarea");
+    notesInput.className = "textarea";
     notesInput.value = employee && employee.internalNotes ? employee.internalNotes : "";
-    notesLabel.appendChild(notesInput);
-    form.appendChild(notesLabel);
+    form.appendChild(buildField("Notas internas", notesInput, "Solo las ve el encargado"));
+
+    const actions = document.createElement("div");
+    actions.className = "row-end";
+    actions.style.marginTop = "var(--s-6)";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "btn btn--secondary";
+    cancelButton.textContent = "Cancelar";
+    cancelButton.addEventListener("click", closeModal);
+    actions.appendChild(cancelButton);
 
     const saveButton = document.createElement("button");
     saveButton.type = "submit";
+    saveButton.className = "btn btn--primary";
     saveButton.textContent = submitLabel;
-    form.appendChild(saveButton);
+    actions.appendChild(saveButton);
+    form.appendChild(actions);
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -184,7 +215,7 @@ function buildEmployeeForm(employee, submitLabel, onSubmit) {
             contractType: contractSelect.value,
             contractHours: contractSelect.value === "PART_TIME" ? Number(hoursInput.value) : null,
             venueId: currentVenueId,
-            positions: positionCheckboxes.filter((c) => c.checked).map((c) => c.value),
+            positions: positions.checkboxes.filter((c) => c.checked).map((c) => c.value),
             canWorkSplitShift: splitShiftCheckbox.checked,
             canOpen: openCheckbox.checked,
             canClose: closeCheckbox.checked,
@@ -198,131 +229,141 @@ function buildEmployeeForm(employee, submitLabel, onSubmit) {
     return form;
 }
 
-function buildCapabilityCheckbox(fieldset, text, checked) {
-    const label = document.createElement("label");
-    label.className = "checkbox-label";
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.defaultChecked = checked;
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(text));
-    fieldset.appendChild(label);
-    return checkbox;
+async function loadEmployees() {
+    renderEmployees(await fetchJson("/api/employees"));
 }
 
-async function loadEmployees() {
-    const employees = await fetchJson("/api/employees");
-    renderEmployees(employees);
+function contractLine(employee) {
+    if (employee.contractType !== "PART_TIME") {
+        return "Jornada completa";
+    }
+    return employee.contractHours ? `Parcial · ${employee.contractHours}h/sem` : "Parcial";
+}
+
+function positionsLine(employee) {
+    if (!employee.positions || employee.positions.length === 0) {
+        return "";
+    }
+    return employee.positions.map((value) => POSITION_LABELS[value] || value).join(", ");
+}
+
+/**
+ * Una fila por persona. El nombre y las notas los escribe el encargado, así que todo texto
+ * ajeno se inserta con textContent y nunca como HTML.
+ */
+function buildEmployeeRow(employee) {
+    const row = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    const name = document.createElement("div");
+    name.className = "cell-title";
+    name.textContent = employee.name;
+    nameCell.appendChild(name);
+    const email = document.createElement("div");
+    email.className = "cell-sub";
+    email.textContent = employee.email;
+    nameCell.appendChild(email);
+    row.appendChild(nameCell);
+
+    const contractCell = document.createElement("td");
+    contractCell.textContent = contractLine(employee);
+    row.appendChild(contractCell);
+
+    const positionsCell = document.createElement("td");
+    const positions = positionsLine(employee);
+    positionsCell.textContent = positions || "Sin puesto asignado";
+    if (!positions) {
+        positionsCell.className = "cell-empty";
+    }
+    row.appendChild(positionsCell);
+
+    const actionsCell = document.createElement("td");
+    actionsCell.className = "right";
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+
+    if (!employee.active) {
+        const inactive = document.createElement("span");
+        inactive.className = "pill pill--off";
+        const mark = document.createElement("span");
+        mark.className = "mark mark--ring";
+        inactive.appendChild(mark);
+        inactive.appendChild(document.createTextNode("De baja"));
+        actions.appendChild(inactive);
+    }
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "btn btn--secondary btn--sm";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => openEmployeeForm(employee));
+    actions.appendChild(editButton);
+
+    if (employee.active) {
+        const deactivateButton = document.createElement("button");
+        deactivateButton.type = "button";
+        deactivateButton.className = "btn btn--quiet btn--sm";
+        deactivateButton.textContent = "Dar de baja";
+        deactivateButton.addEventListener("click", () => {
+            confirmAction(
+                "Dar de baja",
+                `${employee.name} dejará de aparecer en los cuadrantes nuevos. Los ya generados no cambian.`,
+                "Dar de baja",
+                async () => {
+                    try {
+                        await fetchJson(`/api/employees/${employee.id}`, { method: "DELETE" });
+                        setStatusMessage(`${employee.name} está de baja.`, false);
+                        await loadEmployees();
+                    } catch (error) {
+                        setStatusMessage(error.message, true);
+                    }
+                });
+        });
+        actions.appendChild(deactivateButton);
+    }
+
+    actionsCell.appendChild(actions);
+    row.appendChild(actionsCell);
+    return row;
 }
 
 function renderEmployees(employees) {
     const list = document.getElementById("employees-list");
     const empty = document.getElementById("employees-empty");
-    list.innerHTML = "";
+    const table = document.getElementById("employees-table");
+    list.replaceChildren();
 
-    if (employees.length === 0) {
-        empty.hidden = false;
+    const isEmpty = employees.length === 0;
+    empty.hidden = !isEmpty;
+    table.hidden = isEmpty;
+    if (isEmpty) {
         return;
     }
-    empty.hidden = true;
-
-    employees.forEach((employee) => {
-        list.appendChild(buildEmployeeCard(employee));
-    });
+    employees.forEach((employee) => list.appendChild(buildEmployeeRow(employee)));
 }
 
-/** Resumen corto para no obligar a abrir la tarjeta solo para ver quién es quién. */
-function employeeSummaryLine(employee) {
-    const contract = employee.contractType === "PART_TIME"
-        ? `Parcial${employee.contractHours ? ` (${employee.contractHours}h/sem)` : ""}`
-        : "Jornada completa";
-    const positions = employee.positions && employee.positions.length > 0
-        ? employee.positions.map((value) => POSITION_LABELS[value] || value).join(", ")
-        : "Sin puesto asignado";
-    return `${contract} · ${positions}`;
-}
-
-function buildEmployeeCard(employee) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "employee-card-wrapper";
-
-    const details = document.createElement("details");
-    details.className = "employee-details";
-
-    const summary = document.createElement("summary");
-    const summaryName = document.createElement("span");
-    summaryName.className = "employee-summary-name";
-    summaryName.textContent = employee.name;
-    if (!employee.active) {
-        const inactiveBadge = document.createElement("span");
-        inactiveBadge.className = "employee-inactive-badge";
-        inactiveBadge.textContent = "inactivo";
-        summaryName.appendChild(inactiveBadge);
-    }
-    const summaryMeta = document.createElement("span");
-    summaryMeta.className = "employee-summary-meta";
-    summaryMeta.textContent = employeeSummaryLine(employee);
-    summary.appendChild(summaryName);
-    summary.appendChild(summaryMeta);
-    details.appendChild(summary);
-
-    const form = buildEmployeeForm(employee, "Guardar", async (body) => {
+/** Abre la ficha en un modal. Sin empleado, es un alta. */
+function openEmployeeForm(employee) {
+    const form = buildEmployeeForm(employee, employee ? "Guardar" : "Añadir empleado", async (body) => {
+        const url = employee ? `/api/employees/${employee.id}` : "/api/employees";
         try {
-            await fetchJson(`/api/employees/${employee.id}`, {
-                method: "PUT",
+            await fetchJson(url, {
+                method: employee ? "PUT" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body)
             });
-            setStatusMessage(`"${body.name}" actualizado.`, false);
+            closeModal();
+            setStatusMessage(employee ? `${body.name} actualizado.` : `${body.name} añadido al equipo.`, false);
             await loadEmployees();
         } catch (error) {
             setStatusMessage(error.message, true);
         }
     });
-    details.appendChild(form);
-    wrapper.appendChild(details);
-
-    if (employee.active) {
-        const deactivateButton = document.createElement("button");
-        deactivateButton.type = "button";
-        deactivateButton.className = "preference-delete-button employee-deactivate-button";
-        deactivateButton.textContent = "Dar de baja";
-        deactivateButton.addEventListener("click", async () => {
-            if (!window.confirm(`¿Dar de baja a ${employee.name}?`)) {
-                return;
-            }
-            try {
-                await fetchJson(`/api/employees/${employee.id}`, { method: "DELETE" });
-                setStatusMessage(`"${employee.name}" dado de baja.`, false);
-                await loadEmployees();
-            } catch (error) {
-                setStatusMessage(error.message, true);
-            }
-        });
-        wrapper.appendChild(deactivateButton);
-    }
-
-    return wrapper;
+    openModal(employee ? "Editar empleado" : "Añadir empleado", form);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const newEmployeeForm = buildEmployeeForm(null, "Añadir empleado", async (body) => {
-        try {
-            await fetchJson("/api/employees", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body)
-            });
-            setStatusMessage(`"${body.name}" añadido.`, false);
-            newEmployeeForm.reset();
-            newEmployeeForm.querySelector("select").dispatchEvent(new Event("change"));
-            await loadEmployees();
-        } catch (error) {
-            setStatusMessage(error.message, true);
-        }
-    });
-    newEmployeeForm.id = "new-employee-form";
-    document.getElementById("new-employee-form").replaceWith(newEmployeeForm);
+    document.getElementById("new-employee-button").addEventListener("click", () => openEmployeeForm(null));
 
     fetchJson("/api/auth/me").then((me) => {
         if (me.role !== "MANAGER") {

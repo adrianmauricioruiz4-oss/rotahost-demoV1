@@ -345,6 +345,30 @@ p { margin: 0; }
 /* El nombre del local, junto a la marca. Dominio. */
 .topbar .venue-name { font-size: 15px; color: var(--ink-3); }
 
+/* Grupo de casillas. El sistema base solo cubre campos de una sola respuesta, y la ficha
+   de empleado necesita marcar varios puestos y varias capacidades a la vez. */
+.fieldset { border: none; padding: 0; margin: 0; }
+.fieldset legend {
+  padding: 0;
+  margin-bottom: var(--s-2);
+  font-size: 15px; font-weight: 500; color: var(--ink-2);
+}
+.check {
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: var(--touch);
+  font-size: 16px; color: var(--ink);
+  cursor: pointer;
+}
+.check input { width: 20px; height: 20px; accent-color: var(--ink); flex-shrink: 0; }
+
+/* Formularios largos dentro de un modal. La ficha de empleado no cabe de una vez en la
+   pantalla de un portátil, así que el modal se desplaza por dentro en vez de desbordar.
+   El 88vh no sale de un token a propósito: no hay token de altura de ventana. */
+.modal { max-height: 88vh; overflow-y: auto; }
+
+/* Fila de acciones al final de una fila de tabla. */
+.row-actions { display: flex; gap: var(--s-2); justify-content: flex-end; flex-wrap: wrap; }
+
 /* La barra base no contempla móvil y aquí hay cinco secciones más el nombre del
    local: en pantalla estrecha la marca se queda arriba y la navegación pasa a una
    fila propia con desplazamiento horizontal. */

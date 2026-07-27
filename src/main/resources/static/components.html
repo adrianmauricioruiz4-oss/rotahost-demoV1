@@ -168,6 +168,12 @@
         <label class="label" for="f5">Motivo de la corrección</label>
         <textarea class="textarea" id="f5" placeholder="El empleado olvidó fichar la salida"></textarea>
       </div>
+      <fieldset class="fieldset field">
+        <legend>Puestos</legend>
+        <label class="check"><input type="checkbox" checked>Camarero/a</label>
+        <label class="check"><input type="checkbox">Cocinero/a</label>
+        <label class="check"><input type="checkbox">Encargado/a</label>
+      </fieldset>
       <div class="row-end" style="margin-top:26px">
         <button class="btn btn--secondary">Cancelar</button>
         <button class="btn btn--primary">Guardar</button>
@@ -253,6 +259,17 @@
             <td class="cell-empty">—</td>
             <td class="cell-empty">—</td>
             <td class="right"><button class="pill pill--alert">Corregir</button></td>
+          </tr>
+          <tr>
+            <td><div class="cell-title">Nuria Torres</div><div class="cell-sub">Barra</div></td>
+            <td>—</td>
+            <td class="cell-empty">Sin puesto asignado</td>
+            <td class="right">
+              <div class="row-actions">
+                <button class="btn btn--secondary btn--sm">Editar</button>
+                <button class="btn btn--quiet btn--sm">Dar de baja</button>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
