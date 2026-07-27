@@ -73,7 +73,7 @@ class LoginPageTest {
         ResponseEntity<String> response = restTemplate.getForEntity("/login.html", String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).contains("RotaHost");
+        assertThat(response.getBody()).contains("RotaTeam");
     }
 
     @Test

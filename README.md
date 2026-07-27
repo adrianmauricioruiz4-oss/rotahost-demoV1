@@ -1,4 +1,4 @@
-# RotaHost
+# RotaTeam
 
 Generador de cuadrantes semanales para bares y restaurantes de 8 a 15 empleados. El sistema
 *propone* un cuadrante a partir de las preferencias del equipo y las necesidades de cobertura del

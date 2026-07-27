@@ -1,4 +1,4 @@
-# CLAUDE.md — RotaHost (gestor de cuadrantes para hostelería)
+# CLAUDE.md — RotaTeam (gestor de cuadrantes para hostelería)
 
 Este fichero es el contrato de trabajo entre el desarrollador y Claude Code.
 Léelo entero antes de tocar nada.
