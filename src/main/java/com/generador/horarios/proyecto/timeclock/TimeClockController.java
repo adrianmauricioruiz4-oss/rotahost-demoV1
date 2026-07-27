@@ -4,9 +4,11 @@ import com.generador.horarios.proyecto.shared.security.CurrentUserService;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockCorrectionRequest;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryCreateRequest;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryResponse;
+import com.generador.horarios.proyecto.timeclock.dto.TimeClockOverviewResponse;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockStatusResponse;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
@@ -61,6 +63,16 @@ public class TimeClockController {
             @RequestBody(required = false) PunchRequest request, Authentication authentication) {
         Long employeeId = currentUserService.currentEmployee(authentication).getId();
         return timeClockService.punch(employeeId, request == null ? null : request.type());
+    }
+
+    /**
+     * Quién está trabajando ahora mismo. Siempre del local de quien pregunta: el venue no
+     * viaja como parámetro para que nadie pueda mirar otro cambiando la URL.
+     */
+    @GetMapping("/overview")
+    public TimeClockOverviewResponse overview(Authentication authentication) {
+        Long venueId = currentUserService.currentVenueId(authentication);
+        return timeClockService.overview(venueId, LocalDateTime.now());
     }
 
     /**

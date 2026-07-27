@@ -5,12 +5,16 @@ import com.generador.horarios.proyecto.employee.EmployeeRepository;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockCorrectionRequest;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryCreateRequest;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockEntryResponse;
+import com.generador.horarios.proyecto.timeclock.dto.TimeClockOverviewResponse;
+import com.generador.horarios.proyecto.timeclock.dto.TimeClockStaffRow;
 import com.generador.horarios.proyecto.timeclock.dto.TimeClockStatusResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -95,6 +99,57 @@ public class TimeClockService {
         return timeClockEntryRepository.findByEmployeeIdAndTimestampBetweenOrderByTimestampAsc(
                         employeeId, date.atStartOfDay(), date.plusDays(1).atStartOfDay())
                 .stream().map(this::toResponse).toList();
+    }
+
+    /**
+     * Quién está trabajando ahora mismo en un local, con su acumulado del día y las jornadas
+     * que quedaron abiertas de días anteriores.
+     *
+     * @param venueId local del encargado que pregunta
+     */
+    @Transactional(readOnly = true)
+    public TimeClockOverviewResponse overview(Long venueId, LocalDateTime now) {
+        LocalDate today = now.toLocalDate();
+        List<TimeClockStaffRow> staff = employeeRepository.findByVenueIdAndActiveTrue(venueId).stream()
+                .map(employee -> staffRow(employee, today, now))
+                .sorted(Comparator.comparing(TimeClockStaffRow::name))
+                .toList();
+
+        return new TimeClockOverviewResponse(
+                today,
+                (int) staff.stream().filter(r -> "WORKING".equals(r.state())).count(),
+                (int) staff.stream().filter(r -> "ON_BREAK".equals(r.state())).count(),
+                (int) staff.stream().filter(r -> "OFF".equals(r.state())).count(),
+                (int) staff.stream().filter(r -> r.openShiftSince() != null).count(),
+                staff);
+    }
+
+    private TimeClockStaffRow staffRow(Employee employee, LocalDate today, LocalDateTime now) {
+        Optional<TimeClockEntry> last = timeClockEntryRepository.findTopByEmployeeIdOrderByTimestampDesc(employee.getId());
+        PunchType lastType = last.map(TimeClockEntry::getType).orElse(null);
+        ClockState state = stateOf(lastType);
+
+        WorkedTime.Spans spans = spansAround(employee.getId(), today, now);
+        long workedToday = WorkedTime.effectiveMinutes(
+                spans, today.atStartOfDay(), today.plusDays(1).atStartOfDay(),
+                employee.getVenue().getBreakAllowanceMinutes());
+
+        // Sigue dentro y su última marca es de otro día: se fue sin fichar la salida.
+        LocalDateTime openShiftSince = null;
+        if (state != ClockState.OFF && last.isPresent() && last.get().getTimestamp().toLocalDate().isBefore(today)) {
+            openShiftSince = last.get().getTimestamp();
+        }
+
+        LocalDateTime clockedInAt = state == ClockState.OFF
+                ? null
+                : last.map(TimeClockEntry::getTimestamp).orElse(null);
+
+        String positions = employee.getPositions().stream()
+                .map(Enum::name).sorted().collect(Collectors.joining(", "));
+
+        return new TimeClockStaffRow(
+                employee.getId(), employee.getName(), positions,
+                state.name(), clockedInAt, workedToday, openShiftSince);
     }
 
     /**

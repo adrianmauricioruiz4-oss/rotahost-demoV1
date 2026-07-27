@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RotaTeam · Fichajes del equipo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/design-system.css">
+</head>
+<body>
+    <div class="topbar" id="shell-topbar"></div>
+
+    <main class="page stack-6">
+        <div class="row-between">
+            <div class="stack-2">
+                <p class="text-secondary" id="today-label"></p>
+                <h1>Ahora mismo</h1>
+            </div>
+            <button type="button" class="btn btn--secondary" id="refresh-button">Actualizar</button>
+        </div>
+
+        <p id="status-message" class="notice" role="status" hidden></p>
+
+        <!-- Las incidencias van arriba, antes de las métricas (DESIGN.md, panel admin). -->
+        <section class="stack-3" id="alerts-section" hidden>
+            <h2 class="sr-only">Jornadas sin cerrar</h2>
+            <div class="stack-3" id="alerts-list"></div>
+        </section>
+
+        <section class="stack-4">
+            <h2 class="sr-only">Resumen</h2>
+            <div class="grid-3">
+                <div class="tile tile-ok">
+                    <div class="tile-n" id="count-working">—</div>
+                    <div class="tile-l">Trabajando</div>
+                </div>
+                <div class="tile tile-warn">
+                    <div class="tile-n" id="count-break">—</div>
+                    <div class="tile-l">En pausa</div>
+                </div>
+                <div class="tile">
+                    <div class="tile-n" id="count-off">—</div>
+                    <div class="tile-l">Sin fichar</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="surface stack-4">
+            <h2>Plantilla</h2>
+            <table class="table" id="staff-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Empleado</th>
+                        <th scope="col">Entrada</th>
+                        <th scope="col">Acumulado hoy</th>
+                        <th scope="col" class="right">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="staff-list"></tbody>
+            </table>
+
+            <div class="empty" id="staff-empty" hidden>
+                <h3>Este local no tiene a nadie dado de alta</h3>
+                <p>Añade a tu equipo para poder llevar el registro de jornada.</p>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/notice.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/shell.js"></script>
+    <script src="js/timeclock-admin.js"></script>
+</body>
+</html>

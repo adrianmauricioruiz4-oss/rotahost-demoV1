@@ -60,6 +60,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login.html", "/css/**", "/js/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/guest-roster").permitAll()
+                        // La consola enseña las horas de toda la plantilla: solo el encargado.
+                        .requestMatchers(HttpMethod.GET, "/api/timeclock/overview").hasRole("MANAGER")
                         .requestMatchers(HttpMethod.POST, "/api/auth/guest-login").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**")

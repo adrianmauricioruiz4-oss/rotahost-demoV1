@@ -9,6 +9,7 @@
         { href: "dashboard.html", label: "Panel", managerOnly: true },
         { href: "index.html", label: "Cuadrante", managerOnly: true },
         { href: "employees.html", label: "Empleados", managerOnly: true },
+        { href: "fichajes.html", label: "Fichajes", managerOnly: true },
         { href: "employee.html", label: "Mi semana", managerOnly: false },
         { href: "fichar.html", label: "Fichar", managerOnly: false },
         { href: "settings.html", label: "Configuración", managerOnly: true }
