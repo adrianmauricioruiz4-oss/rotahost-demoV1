@@ -24,45 +24,60 @@ async function fetchJson(url, options) {
 }
 
 function setStatusMessage(message, isError) {
-    const el = document.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
-        return;
-    }
-    el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
-    el.hidden = false;
+    showNotice("status-message", message, isError ? "alert" : "ok");
 }
 
+/**
+ * Estado del cuadrante como píldora. Cada estado lleva su forma además del color,
+ * porque el color solo no comunica el estado.
+ */
 function renderScheduleStatus(scheduleStatus) {
     const badge = document.getElementById("dash-status-badge");
+    const mark = document.getElementById("dash-status-mark");
     const text = document.getElementById("dash-status-text");
+    const hint = document.getElementById("dash-schedule-hint");
+
     if (scheduleStatus === "PUBLISHED") {
-        badge.className = "badge badge-pub";
+        badge.className = "pill pill--ok";
+        mark.className = "mark mark--dot";
         text.textContent = "Publicado";
+        hint.textContent = "El equipo ya puede consultarlo. Los cambios de última hora se hacen desde el cuadrante.";
     } else if (scheduleStatus === "DRAFT") {
-        badge.className = "badge badge-draft";
+        badge.className = "pill pill--warn";
+        mark.className = "mark mark--bars";
         text.textContent = "Borrador";
+        hint.textContent = "Hay una propuesta sin publicar. Revísala y publícala cuando te encaje.";
     } else {
-        badge.className = "badge";
+        badge.className = "pill pill--off";
+        mark.className = "mark mark--ring";
         text.textContent = "Sin generar";
+        hint.textContent = "Esta semana todavía no tiene cuadrante.";
     }
+    document.getElementById("dash-schedule-section").hidden = false;
 }
 
+/**
+ * Un aviso por conflicto, arriba del todo. El texto lo compone el backend a partir de
+ * las restricciones incumplidas, así que se inserta con textContent y nunca como HTML.
+ */
 function renderAlerts(alerts) {
     const section = document.getElementById("dash-alerts-section");
     const list = document.getElementById("dash-alerts-list");
-    list.innerHTML = "";
+    list.replaceChildren();
 
-    if (!alerts || alerts.length === 0) {
+    const count = alerts ? alerts.length : 0;
+    document.getElementById("dash-alerts-count").textContent = String(count);
+    document.getElementById("dash-alerts-tile").className = count > 0 ? "tile tile-warn" : "tile";
+
+    if (count === 0) {
         section.hidden = true;
         return;
     }
     section.hidden = false;
     alerts.forEach((alert) => {
-        const item = document.createElement("li");
-        item.textContent = alert;
+        const item = document.createElement("p");
         list.appendChild(item);
+        showNotice(item, alert, "alert");
     });
 }
 
@@ -72,7 +87,8 @@ async function loadSummary() {
 
     document.getElementById("dash-venue-name").textContent = summary.venueName;
     document.getElementById("dash-employee-count").textContent = summary.employeeCount;
-    document.getElementById("dash-week-label").textContent = `Cuadrante · semana ${summary.isoWeek}/${summary.isoYear}`;
+    document.getElementById("dash-week-number").textContent = summary.isoWeek;
+    document.getElementById("dash-week-label").textContent = `Semana del año ${summary.isoYear}`;
     renderScheduleStatus(summary.scheduleStatus);
     renderAlerts(summary.alerts);
 
