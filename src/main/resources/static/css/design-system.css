@@ -342,6 +342,12 @@ p { margin: 0; }
    (var(--…)), nunca valores literales, y cada clase nueva tiene su ejemplo en
    /components.html. Lo marcado como "dominio" no viaja al siguiente proyecto. */
 
+/* El atributo hidden lo pierde cualquier elemento cuya clase fije un display: la regla
+   [hidden]{display:none} del navegador es menos específica que un selector de clase. Sin
+   esto, un .notice o un .field ocultos se seguían viendo (avisos vacíos, campos que no
+   tocaban). Va primero para que nada de lo de abajo lo pise. */
+[hidden] { display: none !important; }
+
 /* El nombre del local, junto a la marca. Dominio. */
 .topbar .venue-name { font-size: 15px; color: var(--ink-3); }
 

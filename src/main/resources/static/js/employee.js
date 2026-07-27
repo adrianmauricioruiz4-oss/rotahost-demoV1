@@ -1,4 +1,4 @@
-const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const DAY_OF_WEEK_LABELS = {
     MONDAY: "lunes", TUESDAY: "martes", WEDNESDAY: "miércoles", THURSDAY: "jueves",
     FRIDAY: "viernes", SATURDAY: "sábado", SUNDAY: "domingo"
@@ -9,6 +9,7 @@ let ownEmployeeId = null;
 let viewedEmployeeId = null;
 let isManagerUser = false;
 let isGuestUser = false;
+let currentShiftTemplates = [];
 let currentShiftTemplateLabelsById = new Map();
 
 /** Cookie XSRF-TOKEN (legible por JS) que Spring Security espera de vuelta en X-XSRF-TOKEN. */
@@ -50,14 +51,7 @@ async function fetchJson(url, options) {
 }
 
 function setStatusMessage(message, isError) {
-    const el = document.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
-        return;
-    }
-    el.textContent = message;
-    el.className = isError ? "status-message error" : "status-message success";
-    el.hidden = false;
+    showNotice("status-message", message, isError ? "alert" : "ok");
 }
 
 /** Lunes de la semana ISO indicada, calculado sin depender de la fecha actual. */
@@ -81,8 +75,7 @@ function buildWeekDays(isoYear, isoWeek) {
     for (let i = 0; i < 7; i++) {
         const date = new Date(monday);
         date.setUTCDate(monday.getUTCDate() + i);
-        const isoDate = toIsoDateString(date);
-        days.push({ date: isoDate, label: `${DAY_LABELS[i]} ${date.getUTCDate()}` });
+        days.push({ date: toIsoDateString(date), label: DAY_LABELS[i], dayNumber: date.getUTCDate() });
     }
     return days;
 }
@@ -128,41 +121,61 @@ async function loadShiftTemplatesForVenue(venueId) {
     return all.filter((t) => t.venueId === venueId);
 }
 
-function renderShiftSelectOptions(shiftTemplates) {
-    const select = document.getElementById("pref-shift-input");
-    select.innerHTML = "";
-    shiftTemplates.forEach((shiftTemplate) => {
-        const option = document.createElement("option");
-        option.value = String(shiftTemplate.id);
-        option.textContent = formatShiftLabel(shiftTemplate);
-        select.appendChild(option);
-    });
-}
-
-/** status es null cuando todavía no se ha generado un cuadrante para esa semana. */
+/**
+ * Una fila por día. En vertical y no en horizontal a propósito: siete columnas no caben en
+ * un móvil, y esta pantalla se mira sobre todo desde el móvil.
+ * status es null cuando todavía no se ha generado un cuadrante para esa semana.
+ */
 function renderMyWeek(employee, days, assignmentsByDate, status) {
-    const heading = document.getElementById("employee-heading");
-    heading.hidden = false;
-    heading.textContent = status ? `${employee.name} — estado: ${status}` : `${employee.name} — cuadrante no generado todavía`;
+    document.getElementById("employee-heading").textContent = `Turnos de ${employee.name}`;
 
-    const headRow = document.getElementById("week-head-row");
-    const bodyRow = document.getElementById("week-body-row");
-    headRow.innerHTML = "";
-    bodyRow.innerHTML = "";
+    const pill = document.getElementById("week-status-pill");
+    const mark = document.getElementById("week-status-mark");
+    const text = document.getElementById("week-status-text");
+    pill.hidden = false;
+    if (status === "PUBLISHED") {
+        pill.className = "pill pill--ok";
+        mark.className = "mark mark--dot";
+        text.textContent = "Publicado";
+    } else if (status === "DRAFT") {
+        pill.className = "pill pill--warn";
+        mark.className = "mark mark--bars";
+        text.textContent = "Borrador, puede cambiar";
+    } else {
+        pill.className = "pill pill--off";
+        mark.className = "mark mark--ring";
+        text.textContent = "Sin generar";
+    }
+
+    const body = document.getElementById("week-body");
+    body.replaceChildren();
 
     days.forEach((day) => {
-        const th = document.createElement("th");
-        th.textContent = day.label;
-        headRow.appendChild(th);
+        const row = document.createElement("tr");
 
-        const td = document.createElement("td");
+        const dayCell = document.createElement("td");
+        const dayName = document.createElement("div");
+        dayName.className = "cell-title";
+        dayName.textContent = `${day.label} ${day.dayNumber}`;
+        dayCell.appendChild(dayName);
+        row.appendChild(dayCell);
+
+        const shiftCell = document.createElement("td");
         if (!status) {
-            td.textContent = "—";
+            shiftCell.textContent = "—";
+            shiftCell.className = "cell-empty";
         } else {
             const shiftTemplateId = assignmentsByDate.get(day.date);
-            td.textContent = shiftTemplateId ? currentShiftTemplateLabelsById.get(shiftTemplateId) : "Libre";
+            if (shiftTemplateId) {
+                shiftCell.textContent = currentShiftTemplateLabelsById.get(shiftTemplateId);
+            } else {
+                shiftCell.textContent = "Libre";
+                shiftCell.className = "cell-empty";
+            }
         }
-        bodyRow.appendChild(td);
+        row.appendChild(shiftCell);
+
+        body.appendChild(row);
     });
 }
 
@@ -185,54 +198,189 @@ function describePreference(preference) {
 
 function renderPreferences(preferences) {
     const list = document.getElementById("preferences-list");
-    list.innerHTML = "";
+    const empty = document.getElementById("preferences-empty");
+    const table = document.getElementById("preferences-table");
+    list.replaceChildren();
 
-    if (preferences.length === 0) {
-        const empty = document.createElement("li");
-        empty.textContent = "Todavía no tienes preferencias guardadas.";
-        list.appendChild(empty);
+    const isEmpty = preferences.length === 0;
+    empty.hidden = !isEmpty;
+    table.hidden = isEmpty;
+    if (isEmpty) {
         return;
     }
 
     preferences.forEach((preference) => {
-        const item = document.createElement("li");
+        const row = document.createElement("tr");
 
-        const text = document.createElement("span");
-        text.textContent = describePreference(preference);
-        item.appendChild(text);
+        const textCell = document.createElement("td");
+        textCell.textContent = describePreference(preference);
+        row.appendChild(textCell);
+
+        const actionsCell = document.createElement("td");
+        actionsCell.className = "right";
+        const actions = document.createElement("div");
+        actions.className = "row-actions";
 
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
-        deleteButton.className = "preference-delete-button";
-        deleteButton.textContent = "Eliminar";
+        deleteButton.className = "btn btn--quiet btn--sm";
+        deleteButton.textContent = "Quitar";
         deleteButton.addEventListener("click", async () => {
             try {
                 await fetchJson(`/api/preferences/${preference.id}`, { method: "DELETE" });
-                item.remove();
-                if (list.children.length === 0) {
-                    renderPreferences([]);
-                }
+                await loadAndRenderPreferences(ownEmployeeId);
             } catch (error) {
                 setStatusMessage(error.message, true);
             }
         });
-        item.appendChild(deleteButton);
+        actions.appendChild(deleteButton);
+        actionsCell.appendChild(actions);
+        row.appendChild(actionsCell);
 
-        list.appendChild(item);
+        list.appendChild(row);
     });
 }
 
 async function loadAndRenderPreferences(employeeId) {
-    const preferences = await fetchJson(`/api/preferences?employeeId=${employeeId}`);
-    renderPreferences(preferences);
+    renderPreferences(await fetchJson(`/api/preferences?employeeId=${employeeId}`));
 }
 
-function updatePreferenceFormVisibility() {
-    const type = document.getElementById("pref-type-input").value;
-    document.getElementById("pref-day-field").hidden = !(type === "PREFERS_DAY" || type === "AVOIDS_DAY");
-    document.getElementById("pref-shift-field").hidden = !(type === "PREFERS_SHIFT" || type === "AVOIDS_SHIFT");
-    document.getElementById("pref-date-field").hidden = type !== "UNAVAILABLE";
-    document.getElementById("pref-weight-field").hidden = type === "UNAVAILABLE";
+/** Campo con su label asociado por id, como exige la accesibilidad mínima de DESIGN.md. */
+function buildField(id, labelText, control) {
+    const field = document.createElement("div");
+    field.className = "field";
+    control.id = id;
+
+    const label = document.createElement("label");
+    label.className = "label";
+    label.htmlFor = id;
+    label.textContent = labelText;
+
+    field.appendChild(label);
+    field.appendChild(control);
+    return field;
+}
+
+/**
+ * Alta de preferencia en un modal. Los campos que se piden dependen del tipo: un día de la
+ * semana, un turno o una fecha suelta, y el peso solo cuando la preferencia es negociable
+ * (UNAVAILABLE es restricción dura, no admite peso).
+ */
+function openPreferenceForm() {
+    const form = document.createElement("form");
+
+    const typeSelect = document.createElement("select");
+    typeSelect.className = "select";
+    [
+        ["PREFERS_DAY", "Prefiero trabajar un día"],
+        ["AVOIDS_DAY", "Prefiero no trabajar un día"],
+        ["PREFERS_SHIFT", "Prefiero un turno"],
+        ["AVOIDS_SHIFT", "Prefiero evitar un turno"],
+        ["UNAVAILABLE", "No puedo un día concreto"]
+    ].forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        typeSelect.appendChild(option);
+    });
+    form.appendChild(buildField("pref-type-input", "Qué quieres decir", typeSelect));
+
+    const daySelect = document.createElement("select");
+    daySelect.className = "select";
+    Object.entries(DAY_OF_WEEK_LABELS).forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+        daySelect.appendChild(option);
+    });
+    const dayField = buildField("pref-day-input", "Día de la semana", daySelect);
+    form.appendChild(dayField);
+
+    const shiftSelect = document.createElement("select");
+    shiftSelect.className = "select";
+    currentShiftTemplates.forEach((shiftTemplate) => {
+        const option = document.createElement("option");
+        option.value = String(shiftTemplate.id);
+        option.textContent = formatShiftLabel(shiftTemplate);
+        shiftSelect.appendChild(option);
+    });
+    const shiftField = buildField("pref-shift-input", "Turno", shiftSelect);
+    form.appendChild(shiftField);
+
+    const dateInput = document.createElement("input");
+    dateInput.className = "input";
+    dateInput.type = "date";
+    const dateField = buildField("pref-date-input", "Fecha", dateInput);
+    form.appendChild(dateField);
+
+    const weightInput = document.createElement("input");
+    weightInput.className = "input";
+    weightInput.type = "number";
+    weightInput.min = "1";
+    weightInput.max = "5";
+    weightInput.value = "3";
+    const weightField = buildField("pref-weight-input", "Cuánto te importa, de 1 a 5", weightInput);
+    form.appendChild(weightField);
+
+    function updateVisibility() {
+        const type = typeSelect.value;
+        dayField.hidden = !(type === "PREFERS_DAY" || type === "AVOIDS_DAY");
+        shiftField.hidden = !(type === "PREFERS_SHIFT" || type === "AVOIDS_SHIFT");
+        dateField.hidden = type !== "UNAVAILABLE";
+        weightField.hidden = type === "UNAVAILABLE";
+    }
+    typeSelect.addEventListener("change", updateVisibility);
+    updateVisibility();
+
+    const actions = document.createElement("div");
+    actions.className = "row-end";
+    actions.style.marginTop = "var(--s-6)";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "btn btn--secondary";
+    cancelButton.textContent = "Cancelar";
+    cancelButton.addEventListener("click", closeModal);
+    actions.appendChild(cancelButton);
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "submit";
+    saveButton.className = "btn btn--primary";
+    saveButton.textContent = "Guardar";
+    actions.appendChild(saveButton);
+    form.appendChild(actions);
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const type = typeSelect.value;
+        const isDayType = type === "PREFERS_DAY" || type === "AVOIDS_DAY";
+        const isShiftType = type === "PREFERS_SHIFT" || type === "AVOIDS_SHIFT";
+        const isUnavailable = type === "UNAVAILABLE";
+
+        const body = {
+            employeeId: ownEmployeeId,
+            type,
+            dayOfWeek: isDayType ? daySelect.value : null,
+            shiftTemplateId: isShiftType ? Number(shiftSelect.value) : null,
+            specificDate: isUnavailable ? dateInput.value : null,
+            weight: isUnavailable ? null : Number(weightInput.value)
+        };
+
+        try {
+            await fetchJson("/api/preferences", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            closeModal();
+            setStatusMessage("Preferencia guardada.", false);
+            await loadAndRenderPreferences(ownEmployeeId);
+        } catch (error) {
+            setStatusMessage(error.message, true);
+        }
+    });
+
+    openModal("Añadir preferencia", form);
 }
 
 /**
@@ -250,23 +398,20 @@ async function loadTimeClockStatus() {
     const button = document.getElementById("timeclock-button");
     const status = document.getElementById("timeclock-status");
     try {
-        const data = await fetchJson("/api/timeclock/status");
-        applyTimeClockStatus(data, button, status);
+        applyTimeClockStatus(await fetchJson("/api/timeclock/status"), button, status);
     } catch (error) {
-        status.textContent = "No se pudo cargar el estado de fichaje.";
+        status.textContent = "No se ha podido cargar tu estado de fichaje.";
     }
 }
 
 function applyTimeClockStatus(data, button, status) {
-    const isClockIn = data.nextAction === "CLOCK_IN";
-    button.textContent = isClockIn ? "Fichar entrada" : "Fichar salida";
-    button.className = isClockIn ? "btn btn-primary" : "btn btn-teal";
+    button.textContent = data.nextAction === "CLOCK_IN" ? "Fichar entrada" : "Fichar salida";
     if (data.lastEntry) {
         const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
-            weekday: "short", hour: "2-digit", minute: "2-digit"
+            weekday: "long", hour: "2-digit", minute: "2-digit"
         });
         const lastLabel = data.lastEntry.type === "CLOCK_IN" ? "Entrada" : "Salida";
-        status.textContent = `Último fichaje: ${lastLabel} · ${time}`;
+        status.textContent = `Tu último fichaje: ${lastLabel}, ${time}.`;
     } else {
         status.textContent = "Todavía no has fichado ninguna vez.";
     }
@@ -295,7 +440,7 @@ async function populateEmployeeSelect() {
     try {
         const employees = await fetchJson("/api/employees");
         const select = document.getElementById("employee-select");
-        select.innerHTML = "";
+        select.replaceChildren();
         employees.filter((e) => e.active).forEach((employee) => {
             const option = document.createElement("option");
             option.value = String(employee.id);
@@ -313,12 +458,8 @@ async function loadMyWeek(isoYear, isoWeek) {
     setStatusMessage(null);
     try {
         const employee = await fetchJson(`/api/employees/${viewedEmployeeId}`);
-        const shiftTemplates = await loadShiftTemplatesForVenue(employee.venueId);
-        currentShiftTemplateLabelsById = new Map(shiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
-        renderShiftSelectOptions(shiftTemplates);
-
-        document.getElementById("preference-fieldset").disabled = false;
-        document.getElementById("preference-hint").hidden = true;
+        currentShiftTemplates = await loadShiftTemplatesForVenue(employee.venueId);
+        currentShiftTemplateLabelsById = new Map(currentShiftTemplates.map((t) => [t.id, formatShiftLabel(t)]));
 
         const days = buildWeekDays(isoYear, isoWeek);
         try {
@@ -329,7 +470,7 @@ async function loadMyWeek(isoYear, isoWeek) {
             renderMyWeek(employee, days, assignmentsByDate, schedule.status);
         } catch (scheduleError) {
             renderMyWeek(employee, days, new Map(), null);
-            setStatusMessage(`Aún no hay cuadrante generado para esa semana (${scheduleError.message}).`, true);
+            setStatusMessage("Esa semana todavía no tiene cuadrante.", true);
         }
 
         updateSectionVisibilityForViewedEmployee();
@@ -344,37 +485,48 @@ async function loadMyWeek(isoYear, isoWeek) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const { isoYear, isoWeek } = currentIsoYearWeek();
-    document.getElementById("iso-year-input").value = isoYear;
-    document.getElementById("iso-week-input").value = isoWeek;
-    updatePreferenceFormVisibility();
+function currentInputWeek() {
+    return {
+        isoYear: Number(document.getElementById("iso-year-input").value),
+        isoWeek: Number(document.getElementById("iso-week-input").value)
+    };
+}
 
-    document.getElementById("pref-type-input").addEventListener("change", updatePreferenceFormVisibility);
+function applyWeekToInputs(week) {
+    document.getElementById("iso-year-input").value = week.isoYear;
+    document.getElementById("iso-week-input").value = week.isoWeek;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    applyWeekToInputs(currentIsoYearWeek());
 
     document.getElementById("wk-prev").addEventListener("click", () => {
-        const current = shiftIsoWeek(
-            Number(document.getElementById("iso-year-input").value),
-            Number(document.getElementById("iso-week-input").value), -1);
-        document.getElementById("iso-year-input").value = current.isoYear;
-        document.getElementById("iso-week-input").value = current.isoWeek;
-        loadMyWeek(current.isoYear, current.isoWeek);
+        const { isoYear, isoWeek } = currentInputWeek();
+        const week = shiftIsoWeek(isoYear, isoWeek, -1);
+        applyWeekToInputs(week);
+        loadMyWeek(week.isoYear, week.isoWeek);
     });
 
     document.getElementById("wk-next").addEventListener("click", () => {
-        const current = shiftIsoWeek(
-            Number(document.getElementById("iso-year-input").value),
-            Number(document.getElementById("iso-week-input").value), 1);
-        document.getElementById("iso-year-input").value = current.isoYear;
-        document.getElementById("iso-week-input").value = current.isoWeek;
-        loadMyWeek(current.isoYear, current.isoWeek);
+        const { isoYear, isoWeek } = currentInputWeek();
+        const week = shiftIsoWeek(isoYear, isoWeek, 1);
+        applyWeekToInputs(week);
+        loadMyWeek(week.isoYear, week.isoWeek);
     });
 
     document.getElementById("timeclock-button").addEventListener("click", punch);
+    document.getElementById("new-preference-button").addEventListener("click", openPreferenceForm);
 
     document.getElementById("employee-select").addEventListener("change", (event) => {
         viewedEmployeeId = Number(event.target.value);
-        loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));
+        const { isoYear, isoWeek } = currentInputWeek();
+        loadMyWeek(isoYear, isoWeek);
+    });
+
+    document.getElementById("lookup-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const { isoYear, isoWeek } = currentInputWeek();
+        await loadMyWeek(isoYear, isoWeek);
     });
 
     fetchJson("/api/auth/me").then(async (me) => {
@@ -383,51 +535,11 @@ document.addEventListener("DOMContentLoaded", () => {
         isManagerUser = me.role === "MANAGER";
         isGuestUser = !!me.guest;
 
-        // La identidad, la navegación según rol y el "Cerrar sesión" los pinta el sidebar
-        // compartido (shell.js), igual que en el resto de vistas.
+        // La identidad, la navegación según rol y el "Cerrar sesión" los pinta la barra
+        // superior compartida (shell.js), igual que en el resto de vistas.
 
         await populateEmployeeSelect();
-        return loadMyWeek(Number(document.getElementById("iso-year-input").value), Number(document.getElementById("iso-week-input").value));
+        const { isoYear, isoWeek } = currentInputWeek();
+        return loadMyWeek(isoYear, isoWeek);
     }).catch((error) => setStatusMessage(error.message, true));
-
-    document.getElementById("lookup-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const isoYear = Number(document.getElementById("iso-year-input").value);
-        const isoWeek = Number(document.getElementById("iso-week-input").value);
-        await loadMyWeek(isoYear, isoWeek);
-    });
-
-    document.getElementById("preference-form").addEventListener("submit", async (event) => {
-        event.preventDefault();
-        if (!ownEmployeeId) {
-            setStatusMessage("Consulta tu semana primero.", true);
-            return;
-        }
-
-        const type = document.getElementById("pref-type-input").value;
-        const isDayType = type === "PREFERS_DAY" || type === "AVOIDS_DAY";
-        const isShiftType = type === "PREFERS_SHIFT" || type === "AVOIDS_SHIFT";
-        const isUnavailable = type === "UNAVAILABLE";
-
-        const body = {
-            employeeId: ownEmployeeId,
-            type,
-            dayOfWeek: isDayType ? document.getElementById("pref-day-input").value : null,
-            shiftTemplateId: isShiftType ? Number(document.getElementById("pref-shift-input").value) : null,
-            specificDate: isUnavailable ? document.getElementById("pref-date-input").value : null,
-            weight: isUnavailable ? null : Number(document.getElementById("pref-weight-input").value)
-        };
-
-        try {
-            await fetchJson("/api/preferences", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body)
-            });
-            setStatusMessage("Preferencia añadida.", false);
-            await loadAndRenderPreferences(ownEmployeeId);
-        } catch (error) {
-            setStatusMessage(error.message, true);
-        }
-    });
 });

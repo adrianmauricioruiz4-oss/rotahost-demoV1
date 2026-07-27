@@ -6,118 +6,99 @@
     <title>RotaTeam · Mi semana</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-    <div class="app">
-        <aside class="sidebar" id="shell-sidebar"></aside>
+    <div class="topbar" id="shell-topbar"></div>
 
-        <div class="main">
-            <div class="topbar">
-                <h1 class="dash-title">Mi semana</h1>
-                <div class="spring"></div>
+    <main class="page stack-6">
+        <div class="stack-2">
+            <h1>Mi semana</h1>
+            <p class="text-lead">Tus turnos y tus preferencias.</p>
+        </div>
+
+        <p id="status-message" class="notice" role="status" hidden></p>
+
+        <section class="surface stack-4">
+            <h2>Qué semana quieres ver</h2>
+
+            <form id="lookup-form">
+                <div class="field" id="employee-select-field" hidden>
+                    <label class="label" for="employee-select">Ver la semana de</label>
+                    <select class="select" id="employee-select"></select>
+                </div>
+                <div class="field">
+                    <label class="label" for="iso-week-input">Semana del año</label>
+                    <input class="input" type="number" id="iso-week-input" min="1" max="53" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="iso-year-input">Año</label>
+                    <input class="input" type="number" id="iso-year-input" min="2000" required>
+                </div>
+
+                <div class="row-between" style="margin-top:var(--s-6)">
+                    <div class="row-actions">
+                        <button type="button" class="btn btn--secondary btn--sm" id="wk-prev">Semana anterior</button>
+                        <button type="button" class="btn btn--secondary btn--sm" id="wk-next">Semana siguiente</button>
+                    </div>
+                    <button type="submit" class="btn btn--primary">Ver semana</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="surface stack-4">
+            <div class="row-between">
+                <h2 id="employee-heading">Turnos de la semana</h2>
+                <span class="pill pill--off" id="week-status-pill" hidden>
+                    <span class="mark mark--ring" id="week-status-mark"></span>
+                    <span id="week-status-text">Sin generar</span>
+                </span>
             </div>
 
-            <main class="dash-main">
-                <p id="status-message" class="status-message" hidden></p>
+            <table class="table" id="week-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Día</th>
+                        <th scope="col">Turno</th>
+                    </tr>
+                </thead>
+                <tbody id="week-body"></tbody>
+            </table>
+        </section>
 
-                <section class="settings-section">
-                    <form id="lookup-form" class="generate-form">
-                        <label id="employee-select-field" hidden>
-                            Ver semana de
-                            <select id="employee-select"></select>
-                        </label>
-                        <div class="week-nav-inline">
-                            <button type="button" class="wk-btn" id="wk-prev" aria-label="Semana anterior">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
-                            </button>
-                            <label>
-                                Año ISO
-                                <input type="number" id="iso-year-input" min="2000" required>
-                            </label>
-                            <label>
-                                Semana ISO
-                                <input type="number" id="iso-week-input" min="1" max="53" required>
-                            </label>
-                            <button type="button" class="wk-btn" id="wk-next" aria-label="Semana siguiente">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
-                            </button>
-                        </div>
-                        <button type="submit">Ver semana</button>
-                    </form>
-                </section>
+        <section class="surface stack-4" id="timeclock-section" hidden>
+            <h2>Fichaje</h2>
+            <p class="text-secondary" id="timeclock-status">Cargando tu último fichaje</p>
+            <button type="button" id="timeclock-button" class="btn btn--secondary btn--block">Fichar</button>
+        </section>
 
-                <section class="settings-section">
-                    <h2 id="employee-heading" hidden></h2>
-                    <div class="schedule-wrapper">
-                        <table id="week-table" class="schedule-table">
-                            <thead>
-                                <tr id="week-head-row"></tr>
-                            </thead>
-                            <tbody>
-                                <tr id="week-body-row"></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+        <section class="surface stack-4" id="preferences-section">
+            <div class="row-between">
+                <h2>Mis preferencias</h2>
+                <button type="button" class="btn btn--secondary btn--sm" id="new-preference-button">Añadir preferencia</button>
+            </div>
+            <p class="text-secondary">El cuadrante las tiene en cuenta, pero el convenio manda por encima de ellas.</p>
 
-                <section class="settings-section" id="timeclock-section" hidden>
-                    <h2>Fichar</h2>
-                    <p id="timeclock-status" class="status-message"></p>
-                    <button type="button" id="timeclock-button" class="btn btn-primary"></button>
-                </section>
+            <table class="table" id="preferences-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Preferencia</th>
+                        <th scope="col" class="right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="preferences-list"></tbody>
+            </table>
 
-                <section class="settings-section" id="preferences-section">
-                    <h2>Mis preferencias</h2>
-                    <ul id="preferences-list" class="preferences-list"></ul>
+            <div class="empty" id="preferences-empty" hidden>
+                <h3>Todavía no has guardado ninguna preferencia</h3>
+                <p>Di qué días o turnos te van mejor y el cuadrante intentará respetarlos.</p>
+            </div>
+        </section>
+    </main>
 
-                    <form id="preference-form" class="generate-form">
-                        <fieldset id="preference-fieldset" disabled>
-                            <label>
-                                Tipo
-                                <select id="pref-type-input">
-                                    <option value="PREFERS_DAY">Prefiero un día</option>
-                                    <option value="AVOIDS_DAY">Evito un día</option>
-                                    <option value="PREFERS_SHIFT">Prefiero un turno</option>
-                                    <option value="AVOIDS_SHIFT">Evito un turno</option>
-                                    <option value="UNAVAILABLE">No disponible (fecha concreta)</option>
-                                </select>
-                            </label>
-                            <label id="pref-day-field">
-                                Día de la semana
-                                <select id="pref-day-input">
-                                    <option value="MONDAY">Lunes</option>
-                                    <option value="TUESDAY">Martes</option>
-                                    <option value="WEDNESDAY">Miércoles</option>
-                                    <option value="THURSDAY">Jueves</option>
-                                    <option value="FRIDAY">Viernes</option>
-                                    <option value="SATURDAY">Sábado</option>
-                                    <option value="SUNDAY">Domingo</option>
-                                </select>
-                            </label>
-                            <label id="pref-shift-field" hidden>
-                                Turno
-                                <select id="pref-shift-input"></select>
-                            </label>
-                            <label id="pref-date-field" hidden>
-                                Fecha
-                                <input type="date" id="pref-date-input">
-                            </label>
-                            <label id="pref-weight-field">
-                                Peso (1-5)
-                                <input type="number" id="pref-weight-input" min="1" max="5" value="3">
-                            </label>
-                            <button type="submit">Añadir preferencia</button>
-                        </fieldset>
-                    </form>
-                    <p id="preference-hint" class="status-message">Consulta tu semana para poder añadir preferencias.</p>
-                </section>
-            </main>
-        </div>
-    </div>
-
+    <script src="js/notice.js"></script>
+    <script src="js/modal.js"></script>
     <script src="js/shell.js"></script>
     <script src="js/employee.js"></script>
 </body>
