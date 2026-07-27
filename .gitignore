@@ -36,6 +36,6 @@ bin/
 # Copias del proyecto descomprimidas dentro del propio proyecto. Traen su propio .git,
 # así que git solo puede anotar un puntero vacío, nunca sus archivos, y arrastran los
 # ._* que mete macOS al comprimir. El historial de este repo ya es la fuente de verdad.
-rotahost-demoV1/
-rotateam-demov2/
+rotahost-demoV1*/
+rotateam-demov2*/
 __MACOSX/

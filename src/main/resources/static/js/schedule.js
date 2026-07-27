@@ -140,68 +140,6 @@ function shiftTemplateById(id) {
     return currentShiftTemplates.find((t) => t.id === id) || null;
 }
 
-/* ---------- franjas del día ---------- */
-
-/**
- * Las tres franjas en las que se reparte el día de un local de hostelería. Los cortes son
- * los habituales —el servicio de mañana, el de comidas y el de noche— y sirven tanto para
- * dar color a la celda como para contar cuánta gente hay en cada tramo.
- */
-const BANDS = [
-    { id: "morning", label: "Mañana", from: 6 * 60, to: 12 * 60 },
-    { id: "midday", label: "Mediodía", from: 12 * 60, to: 17 * 60 },
-    { id: "evening", label: "Tarde y noche", from: 17 * 60, to: 30 * 60 }
-];
-
-/** "16:00" -> 960. Las horas de madrugada se cuentan como continuación del día anterior. */
-function minutesOfDay(localTime) {
-    const [hours, minutes] = localTime.slice(0, 5).split(":").map(Number);
-    return hours * 60 + minutes;
-}
-
-/** Un tramo que cruza la medianoche termina "después de las 24h", no a las 00:00. */
-function segmentRange(segment) {
-    const start = minutesOfDay(segment.startTime);
-    let end = minutesOfDay(segment.endTime);
-    if (end <= start) {
-        end += 24 * 60;
-    }
-    return { start, end };
-}
-
-/** Franjas que toca un turno. Un partido toca dos, y por eso puede aparecer en ambas. */
-function bandsOfShift(shiftTemplate) {
-    const touched = new Set();
-    shiftTemplate.segments.forEach((segment) => {
-        const { start, end } = segmentRange(segment);
-        BANDS.forEach((band) => {
-            if (start < band.to && end > band.from) {
-                touched.add(band.id);
-            }
-        });
-    });
-    return touched;
-}
-
-/**
- * El color de la celda, clasificado por la hora de entrada, que es como se habla de los
- * turnos en un local: el de las ocho es "el de mañana" y el de las cuatro es "el de tarde",
- * aunque el primero se meta en la hora de comer.
- *
- * Los turnos de varios tramos —el partido— llevan su propio color: no son ni una cosa ni
- * otra, y lo que interesa de un vistazo es justamente que están partidos.
- */
-function shiftColourOf(shiftTemplate) {
-    if (shiftTemplate.segments.length > 1) {
-        return "night";
-    }
-    const start = minutesOfDay(shiftTemplate.segments[0].startTime);
-    if (start < 12 * 60) {
-        return "morning";
-    }
-    return start < 15 * 60 ? "midday" : "evening";
-}
-
 /* ---------- carga de datos ---------- */
 
 async function loadReferenceData(venueId) {
@@ -454,54 +392,17 @@ async function applyAssignment(employeeId, date, cell, shiftTemplateId) {
 /* ---------- cuánta gente hay por franja ---------- */
 
 /**
- * Una fila por franja y una columna por día, con cuánta gente cubre cada tramo. Es la
- * lectura que de verdad le interesa al encargado: no quién trabaja, sino cuántos hay
- * puestos por la mañana, a mediodía y por la noche.
+ * El recuento por franja vive en bands.js, compartido con el panel principal: la misma
+ * cuenta contada dos veces acabaría dando dos resultados distintos.
  */
 function renderBandSummary() {
-    const headRow = document.getElementById("band-head-row");
-    const body = document.getElementById("band-body");
-    headRow.replaceChildren();
-    body.replaceChildren();
-
-    const corner = document.createElement("th");
-    corner.scope = "col";
-    corner.textContent = "Franja";
-    headRow.appendChild(corner);
-    currentDays.forEach((day) => {
-        const th = document.createElement("th");
-        th.scope = "col";
-        th.textContent = day.label;
-        headRow.appendChild(th);
-    });
-
-    BANDS.forEach((band) => {
-        const row = document.createElement("tr");
-
-        const name = document.createElement("th");
-        name.scope = "row";
-        name.textContent = band.label;
-        row.appendChild(name);
-
-        currentDays.forEach((day) => {
-            let people = 0;
-            currentEmployees.forEach((employee) => {
-                const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date);
-                if (shiftTemplateId && bandsOfShift(shiftTemplateById(shiftTemplateId)).has(band.id)) {
-                    people += 1;
-                }
-            });
-
-            const cell = document.createElement("td");
-            const value = document.createElement("span");
-            value.className = people > 0 ? `band-count band-count--${band.id}` : "band-count band-count--none";
-            value.textContent = String(people);
-            cell.appendChild(value);
-            row.appendChild(cell);
-        });
-
-        body.appendChild(row);
-    });
+    renderBandTable(
+        document.getElementById("band-head-row"),
+        document.getElementById("band-body"),
+        currentDays,
+        currentEmployees.map((employee) => employee.id),
+        assignmentsByEmployeeDate,
+        shiftTemplateById);
 }
 
 /* ---------- peticiones escritas ---------- */

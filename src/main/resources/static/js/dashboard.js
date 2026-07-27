@@ -1,4 +1,6 @@
 /** Panel principal (T4.6): resumen del venue propio tras el login. */
+let currentVenueId = null;
+
 async function fetchJson(url, options) {
     const response = await fetch(url, options);
     if (!response.ok) {
@@ -81,6 +83,70 @@ function renderAlerts(alerts) {
     });
 }
 
+/** Lunes de la semana ISO, para poder etiquetar los días del resumen. */
+function mondayOfIsoWeek(isoYear, isoWeek) {
+    const jan4 = new Date(Date.UTC(isoYear, 0, 4));
+    const jan4Weekday = (jan4.getUTCDay() + 6) % 7; // 0 = lunes
+    const week1Monday = new Date(jan4);
+    week1Monday.setUTCDate(jan4.getUTCDate() - jan4Weekday);
+    const target = new Date(week1Monday);
+    target.setUTCDate(week1Monday.getUTCDate() + (isoWeek - 1) * 7);
+    return target;
+}
+
+const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+function buildWeekDays(isoYear, isoWeek) {
+    const monday = mondayOfIsoWeek(isoYear, isoWeek);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(monday);
+        date.setUTCDate(monday.getUTCDate() + i);
+        days.push({ date: date.toISOString().slice(0, 10), label: `${DAY_LABELS[i]} ${date.getUTCDate()}` });
+    }
+    return days;
+}
+
+/**
+ * El vistazo rápido al cuadrante desde el panel: cuánta gente hay cada día por franja, sin
+ * tener que abrir la pantalla del cuadrante. Es lo primero que un encargado quiere saber al
+ * entrar. Si esa semana no tiene cuadrante, no se enseña nada: no hay nada que resumir.
+ */
+async function loadWeekGlance(summary) {
+    const wrap = document.getElementById("dash-band-wrap");
+    if (!summary.scheduleStatus) {
+        wrap.hidden = true;
+        return;
+    }
+    try {
+        const [schedule, allTemplates] = await Promise.all([
+            fetchJson(`/api/schedules?venueId=${currentVenueId}&isoYear=${summary.isoYear}&isoWeek=${summary.isoWeek}`),
+            fetchJson("/api/shift-templates")
+        ]);
+        const templates = allTemplates.filter((t) => t.venueId === currentVenueId);
+
+        const byEmployee = new Map();
+        schedule.assignments.forEach((assignment) => {
+            if (!byEmployee.has(assignment.employeeId)) {
+                byEmployee.set(assignment.employeeId, new Map());
+            }
+            byEmployee.get(assignment.employeeId).set(assignment.date, assignment.shiftTemplateId);
+        });
+
+        renderBandTable(
+            document.getElementById("dash-band-head"),
+            document.getElementById("dash-band-body"),
+            buildWeekDays(summary.isoYear, summary.isoWeek),
+            [...byEmployee.keys()],
+            byEmployee,
+            (id) => templates.find((t) => t.id === id) || null);
+        wrap.hidden = false;
+    } catch (error) {
+        // El resumen es un extra: si falla, el panel sigue sirviendo para lo demás.
+        wrap.hidden = true;
+    }
+}
+
 async function loadSummary() {
     setStatusMessage(null);
     const summary = await fetchJson("/api/dashboard/summary");
@@ -96,6 +162,7 @@ async function loadSummary() {
     if (typeof window.updateShellVenueName === "function") {
         window.updateShellVenueName(summary.venueName);
     }
+    await loadWeekGlance(summary);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -105,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "employee.html";
                 return;
             }
+            currentVenueId = me.venueId;
             return loadSummary();
         })
         .catch((error) => setStatusMessage(error.message, true));

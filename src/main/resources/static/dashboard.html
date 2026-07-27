@@ -44,7 +44,7 @@
             </div>
         </section>
 
-        <section class="surface stack-5" id="dash-schedule-section" hidden>
+        <section class="surface stack-4" id="dash-schedule-section" hidden>
             <div class="row-between">
                 <h2>Cuadrante de esta semana</h2>
                 <span class="pill pill--off" id="dash-status-badge">
@@ -53,12 +53,22 @@
                 </span>
             </div>
             <p class="text-secondary" id="dash-schedule-hint">Nada se publica sin que tú lo revises antes.</p>
+
+            <!-- Cuánta gente hay cada día por franja: el vistazo rápido, sin abrir el cuadrante. -->
+            <div class="rota-wrap" id="dash-band-wrap" hidden>
+                <table class="rota" id="dash-band-table">
+                    <thead><tr id="dash-band-head"></tr></thead>
+                    <tbody id="dash-band-body"></tbody>
+                </table>
+            </div>
+
             <a class="btn btn--primary" href="index.html">Ver el cuadrante</a>
         </section>
     </main>
 
     <script src="js/notice.js"></script>
     <script src="js/shell.js"></script>
+    <script src="js/bands.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>
