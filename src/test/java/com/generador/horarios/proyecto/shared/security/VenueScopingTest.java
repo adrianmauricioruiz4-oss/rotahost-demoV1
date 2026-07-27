@@ -118,7 +118,7 @@ class VenueScopingTest {
 
     @Test
     void managerCannotUpdateAnotherVenue() {
-        VenueRequest request = new VenueRequest("Bar B renombrado", LocalTime.of(9, 0), LocalTime.of(1, 0));
+        VenueRequest request = new VenueRequest("Bar B renombrado", LocalTime.of(9, 0), LocalTime.of(1, 0), null);
 
         ResponseEntity<String> response = asManagerA().exchange(
                 "/api/venues/" + venueB.getId(), org.springframework.http.HttpMethod.PUT,

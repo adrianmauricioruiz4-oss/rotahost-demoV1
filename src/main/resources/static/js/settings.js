@@ -71,6 +71,7 @@ async function loadVenue(venueId) {
     document.getElementById("venue-name-input").value = venue.name;
     document.getElementById("venue-opening-input").value = toTimeInputValue(venue.openingTime);
     document.getElementById("venue-closing-input").value = toTimeInputValue(venue.closingTime);
+    document.getElementById("venue-break-input").value = venue.breakAllowanceMinutes;
     document.getElementById("venue-edit-form").hidden = false;
 }
 
@@ -222,7 +223,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const body = {
             name: document.getElementById("venue-name-input").value,
             openingTime: document.getElementById("venue-opening-input").value,
-            closingTime: document.getElementById("venue-closing-input").value
+            closingTime: document.getElementById("venue-closing-input").value,
+            breakAllowanceMinutes: Number(document.getElementById("venue-break-input").value)
         };
         try {
             await fetchJson(`/api/venues/${currentVenueId}`, {

@@ -36,6 +36,11 @@
                     <label class="label" for="venue-closing-input">Hora de cierre</label>
                     <input class="input" type="time" id="venue-closing-input" required>
                 </div>
+                <div class="field">
+                    <label class="label" for="venue-break-input">Minutos de descanso que cuentan como trabajados</label>
+                    <input class="input" type="number" id="venue-break-input" min="0" max="480" required>
+                    <p class="hint">Lo que un empleado descanse hasta este límite no se le resta de la jornada. Lo que pase de aquí, sí.</p>
+                </div>
                 <div class="row-end" style="margin-top:var(--s-6)">
                     <button type="submit" class="btn btn--primary">Guardar</button>
                 </div>

@@ -34,6 +34,16 @@ public class Venue {
     @Column(name = "closing_time", nullable = false)
     private LocalTime closingTime;
 
+    /**
+     * Minutos de pausa que este local reconoce como tiempo trabajado dentro de una jornada.
+     * Lo que se pase de aquí sí se descuenta. El valor por defecto son los 15 minutos del
+     * art. 34.4 del Estatuto de los Trabajadores para jornadas continuadas de más de seis
+     * horas, pero cada convenio y cada acuerdo de empresa pueden decir otra cosa: por eso
+     * es editable y no una constante.
+     */
+    @Column(name = "break_allowance_minutes", nullable = false)
+    private int breakAllowanceMinutes = 15;
+
     @OneToMany(mappedBy = "venue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ShiftTemplate> shiftTemplates = new ArrayList<>();
 
@@ -75,6 +85,14 @@ public class Venue {
 
     public void setClosingTime(LocalTime closingTime) {
         this.closingTime = closingTime;
+    }
+
+    public int getBreakAllowanceMinutes() {
+        return breakAllowanceMinutes;
+    }
+
+    public void setBreakAllowanceMinutes(int breakAllowanceMinutes) {
+        this.breakAllowanceMinutes = breakAllowanceMinutes;
     }
 
     public List<ShiftTemplate> getShiftTemplates() {

@@ -64,7 +64,7 @@ class VenueServiceTest {
 
     @Test
     void updatesNameAndOpeningHours() {
-        VenueRequest request = new VenueRequest("Bar La Esquina Renovado", LocalTime.of(9, 0), LocalTime.of(1, 0));
+        VenueRequest request = new VenueRequest("Bar La Esquina Renovado", LocalTime.of(9, 0), LocalTime.of(1, 0), null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
 
         VenueResponse response = venueService.update(1L, request);
@@ -76,7 +76,7 @@ class VenueServiceTest {
 
     @Test
     void rejectsUnknownVenueOnUpdate() {
-        VenueRequest request = new VenueRequest("Nombre", LocalTime.of(9, 0), LocalTime.of(1, 0));
+        VenueRequest request = new VenueRequest("Nombre", LocalTime.of(9, 0), LocalTime.of(1, 0), null);
         when(venueRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> venueService.update(99L, request))

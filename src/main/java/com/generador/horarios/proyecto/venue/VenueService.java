@@ -38,6 +38,10 @@ public class VenueService {
         venue.setName(request.name());
         venue.setOpeningTime(request.openingTime());
         venue.setClosingTime(request.closingTime());
+        // Null significa "no lo toques": así una pantalla que no conozca el campo no lo borra.
+        if (request.breakAllowanceMinutes() != null) {
+            venue.setBreakAllowanceMinutes(request.breakAllowanceMinutes());
+        }
         return toResponse(venue);
     }
 
@@ -47,6 +51,7 @@ public class VenueService {
     }
 
     private VenueResponse toResponse(Venue venue) {
-        return new VenueResponse(venue.getId(), venue.getName(), venue.getOpeningTime(), venue.getClosingTime());
+        return new VenueResponse(venue.getId(), venue.getName(), venue.getOpeningTime(), venue.getClosingTime(),
+                venue.getBreakAllowanceMinutes());
     }
 }

@@ -404,8 +404,14 @@ async function loadTimeClockStatus() {
     }
 }
 
+const PUNCH_LABELS = {
+    CLOCK_IN: "Fichar entrada",
+    CLOCK_OUT: "Fichar salida",
+    BREAK_END: "Volver al trabajo"
+};
+
 function applyTimeClockStatus(data, button, status) {
-    button.textContent = data.nextAction === "CLOCK_IN" ? "Fichar entrada" : "Fichar salida";
+    button.textContent = PUNCH_LABELS[data.nextAction] || "Fichar";
     if (data.lastEntry) {
         const time = new Date(data.lastEntry.timestamp).toLocaleString("es-ES", {
             weekday: "long", hour: "2-digit", minute: "2-digit"
