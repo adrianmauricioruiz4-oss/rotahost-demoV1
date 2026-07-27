@@ -3,6 +3,7 @@ package com.generador.horarios.proyecto.schedule;
 import com.generador.horarios.proyecto.schedule.dto.AssignmentEditResponse;
 import com.generador.horarios.proyecto.schedule.dto.EditAssignmentRequest;
 import com.generador.horarios.proyecto.schedule.dto.GenerateScheduleRequest;
+import com.generador.horarios.proyecto.schedule.dto.NotifyTeamResponse;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleGenerationResponse;
 import com.generador.horarios.proyecto.schedule.dto.SchedulePublishResponse;
 import com.generador.horarios.proyecto.schedule.dto.ScheduleResponse;
@@ -26,10 +27,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
+    private final ScheduleNotificationService scheduleNotificationService;
     private final CurrentUserService currentUserService;
 
-    public ScheduleController(ScheduleService scheduleService, CurrentUserService currentUserService) {
+    public ScheduleController(
+            ScheduleService scheduleService,
+            ScheduleNotificationService scheduleNotificationService,
+            CurrentUserService currentUserService) {
         this.scheduleService = scheduleService;
+        this.scheduleNotificationService = scheduleNotificationService;
         this.currentUserService = currentUserService;
     }
 
@@ -58,5 +64,20 @@ public class ScheduleController {
     public SchedulePublishResponse publish(@PathVariable Long scheduleId, Authentication authentication) {
         currentUserService.requireOwnVenue(scheduleService.resolveVenueId(scheduleId), authentication);
         return scheduleService.publish(scheduleId);
+    }
+
+    /**
+     * Escribe a quien tiene turno esa semana. Es una acción aparte de publicar a propósito:
+     * el encargado decide cuándo sale el aviso, no la aplicación.
+     *
+     * @param lastMinute true para redactarlo como cambio en vez de como publicación
+     */
+    @PostMapping("/{scheduleId}/notify")
+    public NotifyTeamResponse notifyTeam(
+            @PathVariable Long scheduleId,
+            @RequestParam(defaultValue = "false") boolean lastMinute,
+            Authentication authentication) {
+        currentUserService.requireOwnVenue(scheduleService.resolveVenueId(scheduleId), authentication);
+        return scheduleNotificationService.notifyTeam(scheduleId, lastMinute);
     }
 }

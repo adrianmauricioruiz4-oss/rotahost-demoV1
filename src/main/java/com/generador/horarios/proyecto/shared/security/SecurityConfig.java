@@ -76,7 +76,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/employees/**", "/api/shift-templates/**", "/api/coverage-requirements/**")
                         .hasRole("MANAGER")
-                        .requestMatchers(HttpMethod.POST, "/api/schedules/generate", "/api/schedules/*/publish")
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/schedules/generate", "/api/schedules/*/publish", "/api/schedules/*/notify")
                         .hasRole("MANAGER")
                         // Un invitado (ROLE_GUEST) no es ni EMPLOYEE ni MANAGER: puede ver su semana y
                         // fichar, pero no crear/borrar preferencias en nombre de nadie.

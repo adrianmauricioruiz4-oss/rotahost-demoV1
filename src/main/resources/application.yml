@@ -18,3 +18,23 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+
+  # SMTP para los avisos al equipo. Igual que DB_*, todo por variables de entorno: aquí no
+  # se escribe ninguna credencial ni ninguna dirección real, porque este fichero va al
+  # repositorio y el .env no.
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+# Sin SMTP_HOST no se envía nada: el aviso se escribe en el log y se informa al encargado
+# de que no ha salido. Es el estado por defecto a propósito, para que un entorno de pruebas
+# no pueda mandar correos de verdad a la plantilla por descuido.
+rotateam:
+  mail:
+    from: ${MAIL_FROM:}
+    enabled: ${MAIL_ENABLED:false}

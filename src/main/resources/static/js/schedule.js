@@ -453,6 +453,7 @@ function renderActions() {
     const publishButton = document.getElementById("publish-button");
     const printButton = document.getElementById("print-button");
     const lastMinuteButton = document.getElementById("lastminute-button");
+    const notifyButton = document.getElementById("notify-button");
     const badge = document.getElementById("status-badge");
     const mark = document.getElementById("status-mark");
 
@@ -460,12 +461,16 @@ function renderActions() {
         publishButton.hidden = true;
         printButton.hidden = true;
         lastMinuteButton.hidden = true;
+        notifyButton.hidden = true;
         badge.hidden = true;
         return;
     }
 
     printButton.hidden = false;
     badge.hidden = false;
+    // Solo se avisa de un cuadrante publicado: un borrador todavía no es nada para el equipo.
+    notifyButton.hidden = currentScheduleStatus !== "PUBLISHED";
+    notifyButton.textContent = lastMinuteMode ? "Avisar del cambio" : "Avisar al equipo";
     if (currentScheduleStatus === "PUBLISHED") {
         badge.className = "pill pill--ok";
         mark.className = "mark mark--dot";
@@ -487,6 +492,53 @@ function renderActions() {
  * que se herede: el equipo ya ha visto ese cuadrante, así que tocarlo tiene que ser algo que
  * el encargado pide a propósito cada vez.
  */
+/**
+ * Escribe a quien tiene turno esa semana. Pide confirmación siempre: es lo único de esta
+ * pantalla que sale del sistema hacia la plantilla, y una vez enviado no se recoge.
+ */
+function notifyTeam() {
+    const people = new Set();
+    assignmentsByEmployeeDate.forEach((byDate, employeeId) => {
+        if (byDate.size > 0) {
+            people.add(employeeId);
+        }
+    });
+
+    const question = people.size === 1
+        ? "Se escribirá a 1 persona con turno esta semana, contándole solo los suyos."
+        : `Se escribirá a ${people.size} personas con turno esta semana, contándole a cada una solo los suyos.`;
+
+    confirmAction(
+        lastMinuteMode ? "Avisar del cambio" : "Avisar al equipo",
+        `${question} El correo sale ahora y no se puede recoger.`,
+        "Enviar aviso",
+        async () => {
+            const button = document.getElementById("notify-button");
+            button.disabled = true;
+            try {
+                const result = await fetchJson(
+                    `/api/schedules/${currentScheduleId}/notify?lastMinute=${lastMinuteMode}`, { method: "POST" });
+                setStatusMessage(describeNotifyResult(result), result.mailEnabled ? "ok" : "warn");
+            } catch (error) {
+                setStatusMessage(error.message, "alert");
+            } finally {
+                button.disabled = false;
+            }
+        });
+}
+
+function describeNotifyResult(result) {
+    if (!result.mailEnabled) {
+        return "No ha salido ningún correo: el envío todavía no está configurado en el servidor. "
+            + "El aviso ha quedado anotado en el registro del sistema.";
+    }
+    const base = result.sent === 1 ? "Avisada 1 persona." : `Avisadas ${result.sent} personas.`;
+    if (result.skipped && result.skipped.length > 0) {
+        return `${base} Sin avisar, por no tener correo o por haber fallado el envío: ${result.skipped.join(", ")}.`;
+    }
+    return base;
+}
+
 function toggleLastMinuteMode() {
     lastMinuteMode = !lastMinuteMode;
     renderActions();
@@ -634,8 +686,11 @@ async function publishSchedule() {
         renderActions();
         renderGrid();
         const hasWarnings = result.softWarnings && result.softWarnings.length > 0;
+        // Publicar no escribe a nadie: avisar es un botón aparte que pulsa el encargado.
         setStatusMessage(
-            hasWarnings ? `Cuadrante publicado, con un aviso: ${result.softWarnings[0]}` : "Cuadrante publicado.",
+            hasWarnings
+                ? `Cuadrante publicado, con un aviso: ${result.softWarnings[0]}. Usa "Avisar al equipo" cuando quieras enviarlo.`
+                : "Cuadrante publicado. Usa \"Avisar al equipo\" para escribirles.",
             hasWarnings ? "warn" : "ok");
     } catch (error) {
         setStatusMessage(error.message, "alert");
@@ -665,6 +720,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("empty-generate-button").addEventListener("click", generateWeek);
     document.getElementById("publish-button").addEventListener("click", publishSchedule);
     document.getElementById("lastminute-button").addEventListener("click", toggleLastMinuteMode);
+    document.getElementById("notify-button").addEventListener("click", notifyTeam);
     document.getElementById("print-button").addEventListener("click", () => {
         closeModal();
         window.print();
