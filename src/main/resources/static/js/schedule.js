@@ -140,6 +140,68 @@ function shiftTemplateById(id) {
     return currentShiftTemplates.find((t) => t.id === id) || null;
 }
 
+/* ---------- franjas del día ---------- */
+
+/**
+ * Las tres franjas en las que se reparte el día de un local de hostelería. Los cortes son
+ * los habituales —el servicio de mañana, el de comidas y el de noche— y sirven tanto para
+ * dar color a la celda como para contar cuánta gente hay en cada tramo.
+ */
+const BANDS = [
+    { id: "morning", label: "Mañana", from: 6 * 60, to: 12 * 60 },
+    { id: "midday", label: "Mediodía", from: 12 * 60, to: 17 * 60 },
+    { id: "evening", label: "Tarde y noche", from: 17 * 60, to: 30 * 60 }
+];
+
+/** "16:00" -> 960. Las horas de madrugada se cuentan como continuación del día anterior. */
+function minutesOfDay(localTime) {
+    const [hours, minutes] = localTime.slice(0, 5).split(":").map(Number);
+    return hours * 60 + minutes;
+}
+
+/** Un tramo que cruza la medianoche termina "después de las 24h", no a las 00:00. */
+function segmentRange(segment) {
+    const start = minutesOfDay(segment.startTime);
+    let end = minutesOfDay(segment.endTime);
+    if (end <= start) {
+        end += 24 * 60;
+    }
+    return { start, end };
+}
+
+/** Franjas que toca un turno. Un partido toca dos, y por eso puede aparecer en ambas. */
+function bandsOfShift(shiftTemplate) {
+    const touched = new Set();
+    shiftTemplate.segments.forEach((segment) => {
+        const { start, end } = segmentRange(segment);
+        BANDS.forEach((band) => {
+            if (start < band.to && end > band.from) {
+                touched.add(band.id);
+            }
+        });
+    });
+    return touched;
+}
+
+/**
+ * El color de la celda, clasificado por la hora de entrada, que es como se habla de los
+ * turnos en un local: el de las ocho es "el de mañana" y el de las cuatro es "el de tarde",
+ * aunque el primero se meta en la hora de comer.
+ *
+ * Los turnos de varios tramos —el partido— llevan su propio color: no son ni una cosa ni
+ * otra, y lo que interesa de un vistazo es justamente que están partidos.
+ */
+function shiftColourOf(shiftTemplate) {
+    if (shiftTemplate.segments.length > 1) {
+        return "night";
+    }
+    const start = minutesOfDay(shiftTemplate.segments[0].startTime);
+    if (start < 12 * 60) {
+        return "morning";
+    }
+    return start < 15 * 60 ? "midday" : "evening";
+}
+
 /* ---------- carga de datos ---------- */
 
 async function loadReferenceData(venueId) {
@@ -246,6 +308,8 @@ function buildCell(employee, day) {
         button.textContent = "Libre";
         button.setAttribute("aria-label", `${employee.name}, ${day.label}: libre. Cambiar turno`);
     } else {
+        // El color va por franja; el nombre del turno sigue escrito, no depende del color.
+        button.className += ` rota-cell--${shiftColourOf(shiftTemplate)}`;
         button.textContent = shiftTemplate.name;
         const time = document.createElement("span");
         time.className = "rota-time";
@@ -384,6 +448,199 @@ async function applyAssignment(employeeId, date, cell, shiftTemplateId) {
             setTimeout(() => cell.classList.remove("rota-cell--rejected"), 2200);
         }
         setStatusMessage(error.message, "alert");
+    }
+}
+
+/* ---------- cuánta gente hay por franja ---------- */
+
+/**
+ * Una fila por franja y una columna por día, con cuánta gente cubre cada tramo. Es la
+ * lectura que de verdad le interesa al encargado: no quién trabaja, sino cuántos hay
+ * puestos por la mañana, a mediodía y por la noche.
+ */
+function renderBandSummary() {
+    const headRow = document.getElementById("band-head-row");
+    const body = document.getElementById("band-body");
+    headRow.replaceChildren();
+    body.replaceChildren();
+
+    const corner = document.createElement("th");
+    corner.scope = "col";
+    corner.textContent = "Franja";
+    headRow.appendChild(corner);
+    currentDays.forEach((day) => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = day.label;
+        headRow.appendChild(th);
+    });
+
+    BANDS.forEach((band) => {
+        const row = document.createElement("tr");
+
+        const name = document.createElement("th");
+        name.scope = "row";
+        name.textContent = band.label;
+        row.appendChild(name);
+
+        currentDays.forEach((day) => {
+            let people = 0;
+            currentEmployees.forEach((employee) => {
+                const shiftTemplateId = assignmentsByEmployeeDate.get(employee.id)?.get(day.date);
+                if (shiftTemplateId && bandsOfShift(shiftTemplateById(shiftTemplateId)).has(band.id)) {
+                    people += 1;
+                }
+            });
+
+            const cell = document.createElement("td");
+            const value = document.createElement("span");
+            value.className = people > 0 ? `band-count band-count--${band.id}` : "band-count band-count--none";
+            value.textContent = String(people);
+            cell.appendChild(value);
+            row.appendChild(cell);
+        });
+
+        body.appendChild(row);
+    });
+}
+
+/* ---------- peticiones escritas ---------- */
+
+const DAY_NAME_TO_INDEX = {
+    lunes: 0, martes: 1, miercoles: 2, jueves: 3, viernes: 4, sabado: 5, domingo: 6
+};
+
+/** Quita tildes y baja a minúsculas, para poder comparar lo que se escribe a mano. */
+function normalize(text) {
+    return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+/**
+ * Entiende una línea del tipo "Ana: tarde jueves".
+ *
+ * Es un formato con reglas, no lenguaje libre: nombre, dos puntos, y luego un turno de los
+ * que haya configurados —o la palabra "libre"— y opcionalmente un día de la semana. Sin día,
+ * se aplica a toda la semana. Deliberadamente no hay IA de por medio: el reparto de turnos
+ * es determinista y una interpretación equivocada aquí sería un turno mal asignado.
+ *
+ * @return {{ok:boolean, text:string, employee?:object, shiftTemplateId?:number, dates?:string[]}}
+ */
+function parseRequestLine(line) {
+    const raw = line.trim();
+    if (!raw) {
+        return null;
+    }
+    const colon = raw.indexOf(":");
+    if (colon < 0) {
+        return { ok: false, text: `"${raw}": falta el nombre y los dos puntos.` };
+    }
+
+    const namePart = normalize(raw.slice(0, colon));
+    const rest = normalize(raw.slice(colon + 1));
+    if (!namePart || !rest) {
+        return { ok: false, text: `"${raw}": pon el nombre delante y lo que pide detrás.` };
+    }
+
+    const matches = currentEmployees.filter((e) => normalize(e.name).includes(namePart));
+    if (matches.length === 0) {
+        return { ok: false, text: `"${raw}": no hay nadie que se llame así en el local.` };
+    }
+    if (matches.length > 1) {
+        return { ok: false, text: `"${raw}": hay varias personas que encajan (${matches.map((e) => e.name).join(", ")}). Escribe el nombre completo.` };
+    }
+    const employee = matches[0];
+
+    // El día es opcional: sin él, la petición vale para toda la semana.
+    let dates = currentDays.map((d) => d.date);
+    let dayLabel = "toda la semana";
+    const dayWord = Object.keys(DAY_NAME_TO_INDEX).find((day) => rest.includes(day));
+    if (dayWord) {
+        const index = DAY_NAME_TO_INDEX[dayWord];
+        dates = [currentDays[index].date];
+        dayLabel = currentDays[index].label;
+    }
+
+    if (rest.includes("libre") || rest.includes("descans")) {
+        return { ok: true, employee, shiftTemplateId: null, dates,
+            text: `${employee.name}: libre · ${dayLabel}` };
+    }
+
+    const shiftTemplate = currentShiftTemplates.find((t) => rest.includes(normalize(t.name)));
+    if (!shiftTemplate) {
+        const names = currentShiftTemplates.map((t) => t.name).join(", ");
+        return { ok: false, text: `"${raw}": no reconozco el turno. Los que hay son: ${names}, o "libre".` };
+    }
+
+    return { ok: true, employee, shiftTemplateId: shiftTemplate.id, dates,
+        text: `${employee.name}: ${shiftTemplate.name} · ${dayLabel}` };
+}
+
+let parsedRequests = [];
+
+/** Enseña qué ha entendido antes de tocar nada. Nada se aplica sin pasar por aquí. */
+function checkRequests() {
+    const preview = document.getElementById("requests-preview");
+    preview.replaceChildren();
+
+    const lines = document.getElementById("requests-input").value.split("\n");
+    parsedRequests = lines.map(parseRequestLine).filter((parsed) => parsed !== null);
+
+    parsedRequests.forEach((parsed) => {
+        const item = document.createElement("p");
+        preview.appendChild(item);
+        showNotice(item, parsed.text, parsed.ok ? "ok" : "alert");
+    });
+
+    const applicable = parsedRequests.filter((parsed) => parsed.ok);
+    document.getElementById("requests-apply").disabled = applicable.length === 0;
+    document.getElementById("requests-hint").textContent = parsedRequests.length === 0
+        ? "Escribe una petición por línea."
+        : `${applicable.length} de ${parsedRequests.length} se pueden aplicar.`;
+}
+
+/**
+ * Aplica las peticiones entendidas, una a una, por el mismo camino que la edición manual:
+ * cada cambio se revalida contra las restricciones duras y se rechaza si rompe alguna.
+ */
+async function applyRequests() {
+    const button = document.getElementById("requests-apply");
+    button.disabled = true;
+
+    const applied = [];
+    const rejected = [];
+    for (const parsed of parsedRequests.filter((p) => p.ok)) {
+        for (const date of parsed.dates) {
+            try {
+                await fetchJson(`/api/schedules/${currentScheduleId}/assignments`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        employeeId: parsed.employee.id,
+                        date,
+                        shiftTemplateId: parsed.shiftTemplateId,
+                        lastMinute: lastMinuteMode
+                    })
+                });
+                setAssignmentState(parsed.employee.id, date, parsed.shiftTemplateId);
+                applied.push(parsed.text);
+            } catch (error) {
+                rejected.push(`${parsed.text}: ${error.message}`);
+            }
+        }
+    }
+
+    renderGrid();
+    renderBandSummary();
+
+    if (rejected.length === 0) {
+        setStatusMessage(`${applied.length} cambio${applied.length === 1 ? "" : "s"} aplicado${applied.length === 1 ? "" : "s"}.`, "ok");
+        document.getElementById("requests-input").value = "";
+        document.getElementById("requests-preview").replaceChildren();
+        document.getElementById("requests-hint").textContent = "";
+        parsedRequests = [];
+    } else {
+        setStatusMessage(rejected[0], "alert");
+        button.disabled = false;
     }
 }
 
@@ -592,6 +849,7 @@ function toggleLastMinuteMode() {
 function showBoard() {
     document.getElementById("board-body").hidden = false;
     document.getElementById("empty-state").hidden = true;
+    document.getElementById("empty-week-picker").hidden = true;
     renderActions();
 }
 
@@ -600,6 +858,8 @@ function showEmptyState() {
     currentScheduleStatus = null;
     document.getElementById("board-body").hidden = true;
     document.getElementById("empty-state").hidden = false;
+    // Sin cuadrante no hay nada arriba, así que los mandos de semana bajan al estado vacío.
+    document.getElementById("empty-week-picker").hidden = false;
     document.getElementById("coverage-section").hidden = true;
     renderActions();
 }
@@ -625,6 +885,7 @@ async function applyState(data) {
     renderWeekLabel();
     renderHead();
     renderGrid();
+    renderBandSummary();
     renderCoverage();
     renderEquity();
     showBoard();
@@ -743,17 +1004,34 @@ function shiftWeek(delta) {
     const monday = mondayOfIsoWeek(getIsoYear(), getIsoWeek());
     monday.setUTCDate(monday.getUTCDate() + delta * 7);
     const { isoYear, isoWeek } = isoYearWeekOfDate(monday);
-    document.getElementById("iso-year-input").value = isoYear;
-    document.getElementById("iso-week-input").value = isoWeek;
+    setWeekInputs(isoYear, isoWeek);
     loadExistingWeek();
 }
 
 /* ---------- init ---------- */
 
-document.addEventListener("DOMContentLoaded", () => {
-    const { isoYear, isoWeek } = currentIsoYearWeek();
+/** Los dos formularios de semana (el de arriba y el del estado vacío) van sincronizados. */
+function setWeekInputs(isoYear, isoWeek) {
     document.getElementById("iso-year-input").value = isoYear;
     document.getElementById("iso-week-input").value = isoWeek;
+    document.getElementById("empty-year-input").value = isoYear;
+    document.getElementById("empty-week-input").value = isoWeek;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const { isoYear, isoWeek } = currentIsoYearWeek();
+    setWeekInputs(isoYear, isoWeek);
+
+    document.getElementById("requests-check").addEventListener("click", checkRequests);
+    document.getElementById("requests-apply").addEventListener("click", applyRequests);
+
+    document.getElementById("empty-week-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        setWeekInputs(
+            Number(document.getElementById("empty-year-input").value),
+            Number(document.getElementById("empty-week-input").value));
+        loadExistingWeek();
+    });
 
     document.getElementById("wk-prev").addEventListener("click", () => shiftWeek(-1));
     document.getElementById("wk-next").addEventListener("click", () => shiftWeek(1));

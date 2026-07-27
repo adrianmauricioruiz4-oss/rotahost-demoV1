@@ -454,6 +454,12 @@ body { padding-left: 236px; }
    siguiente proyecto. Los turnos NO se distinguen por color: el sistema no tiene paleta
    categórica y DESIGN.md prohíbe colores fuera de los tokens, así que cada celda dice en
    texto qué turno es y a qué hora. */
+/* El cuadrante y las peticiones, lado a lado en pantalla ancha; apilados en estrecha. */
+.board-split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--s-4); align-items: start; }
+@media (max-width: 1100px) {
+  .board-split { grid-template-columns: 1fr; }
+}
+
 .rota-wrap { overflow-x: auto; }
 
 .rota { width: 100%; border-collapse: collapse; min-width: 760px; }
@@ -506,6 +512,18 @@ body { padding-left: 236px; }
 .rota-cell--midday .rota-time,
 .rota-cell--evening .rota-time,
 .rota-cell--night .rota-time { color: inherit; opacity: .78; }
+
+/* Cifra del recuento por franja, con el color de su propia franja. */
+.band-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; min-height: 34px;
+  border-radius: var(--r-sm);
+  font-size: 16px; font-weight: 500;
+}
+.band-count--morning { background: var(--shift-morning-soft); color: var(--shift-morning); }
+.band-count--midday  { background: var(--shift-midday-soft);  color: var(--shift-midday); }
+.band-count--evening { background: var(--shift-evening-soft); color: var(--shift-evening); }
+.band-count--none    { color: var(--ink-3); font-weight: 400; }
 
 .rota-cell--free { background: transparent; color: var(--ink-3); font-weight: 400; }
 .rota-cell--off  { background: var(--warn-soft);  color: var(--warn); }

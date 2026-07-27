@@ -35,51 +35,85 @@
 
         <p id="status-message" class="notice" role="status" hidden></p>
 
-        <section class="surface stack-4 no-print">
-            <div class="row-between">
-                <h2>Qué semana</h2>
-                <span class="pill pill--off" id="status-badge" hidden>
-                    <span class="mark mark--ring" id="status-mark"></span>
-                    <span id="status-txt">Sin generar</span>
-                </span>
-            </div>
-
-            <form id="week-form">
-                <div class="field">
-                    <label class="label" for="iso-week-input">Semana del año</label>
-                    <input class="input" type="number" id="iso-week-input" min="1" max="53" required>
-                </div>
-                <div class="field">
-                    <label class="label" for="iso-year-input">Año</label>
-                    <input class="input" type="number" id="iso-year-input" min="2000" required>
-                </div>
-                <div class="row-actions" style="margin-top:var(--s-5)">
-                    <button type="button" class="btn btn--secondary btn--sm" id="wk-prev">Semana anterior</button>
-                    <button type="button" class="btn btn--secondary btn--sm" id="wk-next">Semana siguiente</button>
-                    <button type="submit" class="btn btn--secondary btn--sm">Ver semana</button>
-                </div>
-            </form>
-        </section>
-
         <!-- Los huecos sin cubrir van arriba del cuadrante, nunca escondidos en una fila. -->
         <section class="stack-3" id="coverage-section" hidden>
             <h2>Huecos sin cubrir</h2>
             <div class="stack-3" id="coverage-list"></div>
         </section>
 
-        <div id="board-body" hidden>
-            <section class="surface stack-4">
-                <h2 class="sr-only">Turnos de la semana</h2>
+        <!-- El cuadrante primero: es a lo que se viene a esta pantalla. Los mandos, debajo. -->
+        <div id="board-body" hidden class="stack-6">
+            <div class="board-split">
+                <section class="surface stack-4">
+                    <h2 class="sr-only">Turnos de la semana</h2>
+                    <div class="rota-wrap">
+                        <table class="rota" id="schedule-table">
+                            <thead><tr id="schedule-head-row"></tr></thead>
+                            <tbody id="schedule-body"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-caption no-print" id="grid-hint">Pulsa una celda para cambiar el turno de esa persona ese día.</p>
+                </section>
+
+                <!-- Peticiones sueltas, al lado del cuadrante: se escriben y se aplican al momento. -->
+                <section class="surface stack-4 no-print" id="requests-section">
+                    <div class="stack-2">
+                        <h2>Peticiones</h2>
+                        <p class="text-secondary">Una por línea, con el formato <b>Nombre: turno día</b>.</p>
+                    </div>
+                    <div class="field">
+                        <label class="label sr-only" for="requests-input">Peticiones</label>
+                        <textarea class="textarea" id="requests-input" rows="5" placeholder="Ana: tarde jueves&#10;Javier: libre sábado"></textarea>
+                        <p class="hint" id="requests-hint"></p>
+                    </div>
+                    <div id="requests-preview" class="stack-2"></div>
+                    <div class="row-actions">
+                        <button type="button" class="btn btn--secondary btn--sm" id="requests-check">Comprobar</button>
+                        <button type="button" class="btn btn--primary btn--sm" id="requests-apply" disabled>Aplicar</button>
+                    </div>
+                </section>
+            </div>
+
+            <section class="surface stack-4 no-print" id="coverage-summary-section">
+                <div class="stack-2">
+                    <h2>Gente por franja</h2>
+                    <p class="text-secondary">Cuántas personas hay cada día en cada tramo del horario.</p>
+                </div>
                 <div class="rota-wrap">
-                    <table class="rota" id="schedule-table">
-                        <thead><tr id="schedule-head-row"></tr></thead>
-                        <tbody id="schedule-body"></tbody>
+                    <table class="rota" id="band-table">
+                        <thead><tr id="band-head-row"></tr></thead>
+                        <tbody id="band-body"></tbody>
                     </table>
                 </div>
-                <p class="text-caption no-print" id="grid-hint">Pulsa una celda para cambiar el turno de esa persona ese día.</p>
             </section>
 
-            <section class="surface stack-4 no-print" id="equity-section" style="margin-top:var(--s-6)" hidden>
+            <section class="surface stack-4 no-print">
+                <div class="row-between">
+                    <h2>Qué semana</h2>
+                    <span class="pill pill--off" id="status-badge" hidden>
+                        <span class="mark mark--ring" id="status-mark"></span>
+                        <span id="status-txt">Sin generar</span>
+                    </span>
+                </div>
+
+                <form id="week-form">
+                    <div class="field">
+                        <label class="label" for="iso-week-input">Semana del año</label>
+                        <input class="input" type="number" id="iso-week-input" min="1" max="53" required>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="iso-year-input">Año</label>
+                        <input class="input" type="number" id="iso-year-input" min="2000" required>
+                    </div>
+                    <div class="row-actions" style="margin-top:var(--s-5)">
+                        <button type="button" class="btn btn--secondary btn--sm" id="wk-prev">Semana anterior</button>
+                        <button type="button" class="btn btn--secondary btn--sm" id="wk-next">Semana siguiente</button>
+                        <button type="submit" class="btn btn--secondary btn--sm">Ver semana</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="surface stack-4 no-print" id="equity-section" hidden>
                 <div class="stack-2">
                     <h2>Reparto de turnos malos</h2>
                     <p class="text-secondary">Noches de viernes y sábado, domingos y festivos, contando también las tres semanas anteriores.</p>
@@ -95,6 +129,24 @@
                 </table>
             </section>
         </div>
+
+        <!-- Con el cuadrante sin generar, los mandos de semana viven en el estado vacío. -->
+        <section class="surface stack-4 no-print" id="empty-week-picker" hidden>
+            <h2>Qué semana</h2>
+            <form id="empty-week-form">
+                <div class="field">
+                    <label class="label" for="empty-week-input">Semana del año</label>
+                    <input class="input" type="number" id="empty-week-input" min="1" max="53" required>
+                </div>
+                <div class="field">
+                    <label class="label" for="empty-year-input">Año</label>
+                    <input class="input" type="number" id="empty-year-input" min="2000" required>
+                </div>
+                <div class="row-actions" style="margin-top:var(--s-5)">
+                    <button type="submit" class="btn btn--secondary btn--sm">Ver semana</button>
+                </div>
+            </form>
+        </section>
 
         <section class="surface no-print" id="empty-state">
             <div class="empty">
