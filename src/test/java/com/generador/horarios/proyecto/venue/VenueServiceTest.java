@@ -29,7 +29,7 @@ class VenueServiceTest {
     @BeforeEach
     void setUp() {
         venueService = new VenueService(venueRepository);
-        venue = new Venue("Bar La Esquina", LocalTime.of(8, 0), LocalTime.of(2, 0));
+        venue = new Venue("Restaurante El Mirador", LocalTime.of(8, 0), LocalTime.of(2, 0));
         ReflectionTestUtils.setField(venue, "id", 1L);
     }
 
@@ -40,7 +40,7 @@ class VenueServiceTest {
         List<VenueResponse> responses = venueService.findAll();
 
         assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).name()).isEqualTo("Bar La Esquina");
+        assertThat(responses.get(0).name()).isEqualTo("Restaurante El Mirador");
     }
 
     @Test
@@ -64,12 +64,12 @@ class VenueServiceTest {
 
     @Test
     void updatesNameAndOpeningHours() {
-        VenueRequest request = new VenueRequest("Bar La Esquina Renovado", LocalTime.of(9, 0), LocalTime.of(1, 0), null);
+        VenueRequest request = new VenueRequest("Restaurante El Mirador Renovado", LocalTime.of(9, 0), LocalTime.of(1, 0), null);
         when(venueRepository.findById(1L)).thenReturn(Optional.of(venue));
 
         VenueResponse response = venueService.update(1L, request);
 
-        assertThat(response.name()).isEqualTo("Bar La Esquina Renovado");
+        assertThat(response.name()).isEqualTo("Restaurante El Mirador Renovado");
         assertThat(response.openingTime()).isEqualTo(LocalTime.of(9, 0));
         assertThat(response.closingTime()).isEqualTo(LocalTime.of(1, 0));
     }

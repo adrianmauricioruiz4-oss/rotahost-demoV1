@@ -52,7 +52,7 @@ class TimeClockCorrectionTest {
     @BeforeEach
     void setUp() {
         timeClockService = new TimeClockService(timeClockEntryRepository, employeeRepository);
-        venue = venueWithId(1L, "Bar La Esquina");
+        venue = venueWithId(1L, "Restaurante El Mirador");
         worker = employeeWithId(10L, "Jorge Pardo", venue, EmployeeRole.EMPLOYEE);
         manager = employeeWithId(11L, "Ana García", venue, EmployeeRole.MANAGER);
     }

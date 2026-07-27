@@ -51,7 +51,7 @@ class ScheduleNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        venue = new Venue("Bar La Esquina", LocalTime.of(8, 0), LocalTime.of(2, 0));
+        venue = new Venue("Restaurante El Mirador", LocalTime.of(8, 0), LocalTime.of(2, 0));
         ReflectionTestUtils.setField(venue, "id", 1L);
 
         schedule = new Schedule(venue, 2026, 31);

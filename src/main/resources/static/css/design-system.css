@@ -30,6 +30,23 @@
   --alert-soft:  #FAEEED;
   --focus:       #1F6FEB;
 
+  /* Acento de marca. Sirve para la sección activa del menú y poco más: el sistema es
+     neutro a propósito y el color se reserva para donde ayuda a distinguir. */
+  --accent:      #1F5F8B;
+  --accent-soft: #EAF2F8;
+
+  /* Colores de turno del cuadrante (dominio). Cada franja tiene el suyo para poder leer
+     la semana de un vistazo. Todos los textos superan 4.5:1 sobre su propio fondo, y la
+     celda dice además el nombre del turno: el color acompaña, no sustituye al texto. */
+  --shift-morning:      #8A5A00;
+  --shift-morning-soft: #FDF3E3;
+  --shift-midday:       #1F5F8B;
+  --shift-midday-soft:  #EAF2F8;
+  --shift-evening:      #6B3F8F;
+  --shift-evening-soft: #F3EDF8;
+  --shift-night:        #2F5D50;
+  --shift-night-soft:   #E9F1EE;
+
   /* Radios */
   --r-sm:   10px;
   --r:      18px;
@@ -319,24 +336,79 @@ p { margin: 0; }
 }
 .modal h3 { margin-bottom: var(--s-3); }
 
-/* ---------- 16. NAVEGACIÓN ADMIN ---------- */
-.topbar {
+/* ---------- 16. NAVEGACIÓN ADMIN (menú lateral) ----------
+   La marca arriba, las secciones con su icono, y el cerrar sesión abajo del todo. */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 236px;
   background: var(--white);
-  border-bottom: 1px solid var(--line);
-  padding: 0 var(--s-6);
-  display: flex; align-items: center; gap: var(--s-6);
+  border-right: 1px solid var(--line);
+  padding: var(--s-5) var(--s-4) var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2);
+  z-index: 10;
 }
-.topbar .brand {
+/* El contenido deja hueco al menú en vez de quedar debajo. */
+body { padding-left: 236px; }
+
+.sidebar .brand {
   font-size: 15px; font-weight: 600;
-  letter-spacing: .2em; text-transform: uppercase;
-  padding: 20px 0;
+  letter-spacing: .18em; text-transform: uppercase;
+  padding: var(--s-2) var(--s-3);
 }
-.topbar nav { display: flex; gap: var(--s-5); margin-left: auto; }
-.topbar nav a {
-  font-size: 15px; color: var(--ink-2); text-decoration: none;
-  padding: 22px 0; border-bottom: 2px solid transparent;
+.sidebar .venue-name {
+  font-size: 14px; color: var(--ink-3);
+  padding: 0 var(--s-3) var(--s-4);
 }
-.topbar nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+.sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: var(--s-3);
+  min-height: var(--touch);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-sm);
+  font-size: 15px; font-weight: 500; color: var(--ink-2);
+  text-decoration: none;
+  border: none; background: transparent; cursor: pointer;
+  text-align: left; width: 100%;
+}
+.nav-item svg { width: 19px; height: 19px; flex-shrink: 0; }
+.nav-item:hover { background: var(--soft); }
+.nav-item[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+
+.nav-spacer { flex: 1; min-height: var(--s-4); }
+.sidebar-foot { display: flex; align-items: center; gap: var(--s-2); }
+.sidebar-foot .nav-item { flex: 1; }
+
+/* Botón de solo icono: la rueda de configuración. Lleva aria-label, no texto. */
+.icon-btn {
+  width: var(--touch); height: var(--touch);
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent;
+  border-radius: var(--r-sm);
+  color: var(--ink-2); cursor: pointer;
+  text-decoration: none;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:hover { background: var(--soft); }
+.icon-btn[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
+
+@media (max-width: 860px) {
+  /* En móvil el menú pasa a una tira arriba que se desplaza en horizontal. */
+  .sidebar {
+    position: static; width: auto; bottom: auto;
+    flex-direction: row; align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    border-right: none; border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  body { padding-left: 0; }
+  .sidebar .venue-name { display: none; }
+  .sidebar nav { flex-direction: row; }
+  .nav-item { white-space: nowrap; }
+  .nav-spacer { display: none; }
+}
 
 /* ---------- 17. AÑADIDOS DE ROTATEAM ----------
    Todo lo de aquí abajo se ha añadido sobre el sistema base. Reglas: solo tokens
@@ -423,6 +495,17 @@ p { margin: 0; }
 .rota-cell:hover:not(:disabled) { opacity: .82; }
 .rota-cell:disabled { cursor: default; }
 .rota-cell .rota-time { display: block; font-weight: 400; color: var(--ink-2); }
+
+/* Un color por franja, para leer la semana de un vistazo. El nombre del turno sigue escrito
+   en la celda: el color ayuda a distinguir, no es lo único que lo dice. */
+.rota-cell--morning { background: var(--shift-morning-soft); color: var(--shift-morning); }
+.rota-cell--midday  { background: var(--shift-midday-soft);  color: var(--shift-midday); }
+.rota-cell--evening { background: var(--shift-evening-soft); color: var(--shift-evening); }
+.rota-cell--night   { background: var(--shift-night-soft);   color: var(--shift-night); }
+.rota-cell--morning .rota-time,
+.rota-cell--midday .rota-time,
+.rota-cell--evening .rota-time,
+.rota-cell--night .rota-time { color: inherit; opacity: .78; }
 
 .rota-cell--free { background: transparent; color: var(--ink-3); font-weight: 400; }
 .rota-cell--off  { background: var(--warn-soft);  color: var(--warn); }

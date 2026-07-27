@@ -401,7 +401,7 @@ const EVENT_LABELS = {
     CLOCK_OUT: "Salida"
 };
 
-/** Solo el resumen del último fichaje: fichar de verdad se hace en fichar.html. */
+/** Solo el resumen del último fichaje: fichar de verdad se hace en fichajes.html. */
 async function loadTimeClockStatus() {
     const status = document.getElementById("timeclock-status");
     try {

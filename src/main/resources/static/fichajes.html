@@ -3,35 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RotaTeam · Fichajes del equipo</title>
+    <title>RotaTeam · Fichajes</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/design-system.css">
 </head>
 <body>
-    <div class="topbar" id="shell-topbar"></div>
+    <div class="sidebar" id="shell-nav"></div>
 
+    <!--
+      Fichar y ver los fichajes del equipo son la misma sección vista desde los dos lados.
+      Arriba, el fichaje propio, que lo tiene todo el mundo. Debajo, el estado del equipo,
+      que solo ve el encargado.
+    -->
     <main class="page stack-6">
-        <div class="row-between">
-            <div class="stack-2">
-                <p class="text-secondary" id="today-label"></p>
-                <h1>Ahora mismo</h1>
-            </div>
-            <button type="button" class="btn btn--secondary" id="refresh-button">Actualizar</button>
-        </div>
+        <h1 id="greeting">Fichajes</h1>
 
         <p id="status-message" class="notice" role="status" hidden></p>
 
-        <!-- Las incidencias van arriba, antes de las métricas (DESIGN.md, panel admin). -->
-        <section class="stack-3" id="alerts-section" hidden>
-            <h2 class="sr-only">Jornadas sin cerrar</h2>
-            <div class="stack-3" id="alerts-list"></div>
+        <section class="surface stack-5" id="own-punch-section">
+            <h2>Mi fichaje</h2>
+
+            <div class="status-block status-block--out" id="status-block">
+                <p class="status-line">
+                    <span class="mark mark--ring" id="state-mark"></span>
+                    <span id="state-text">Fuera de turno</span>
+                </p>
+                <p class="figure" id="figure" style="margin-top:16px">—</p>
+                <p class="text-secondary" id="since" style="margin-top:10px"></p>
+            </div>
+
+            <div class="row-between">
+                <span class="text-secondary" id="total-label">Esta semana</span>
+                <span class="text-body" id="total-value">—</span>
+            </div>
+
+            <div>
+                <button type="button" class="btn btn--primary btn--hero" id="primary-action">Fichar entrada</button>
+                <button type="button" class="btn btn--secondary btn--block" id="break-action" hidden style="margin-top:10px">Hacer una pausa</button>
+                <p class="text-caption" id="action-note" style="text-align:center;margin-top:14px"></p>
+            </div>
+
+            <div class="timeline">
+                <h3>Hoy</h3>
+                <div id="timeline-items"></div>
+            </div>
         </section>
 
-        <section class="stack-4">
-            <h2 class="sr-only">Resumen</h2>
-            <div class="grid-3">
+        <!-- De aquí abajo, solo el encargado. -->
+        <div id="team-section" hidden>
+            <div class="row-between" style="margin-bottom:var(--s-5)">
+                <div class="stack-2">
+                    <p class="text-secondary" id="today-label"></p>
+                    <h2>El equipo, ahora mismo</h2>
+                </div>
+                <button type="button" class="btn btn--secondary" id="refresh-button">Actualizar</button>
+            </div>
+
+            <!-- Las incidencias van arriba, antes de las métricas (DESIGN.md, panel admin). -->
+            <section class="stack-3" id="alerts-section" hidden style="margin-bottom:var(--s-5)">
+                <h3 class="sr-only">Jornadas sin cerrar</h3>
+                <div class="stack-3" id="alerts-list"></div>
+            </section>
+
+            <div class="grid-3" style="margin-bottom:var(--s-5)">
                 <div class="tile tile-ok">
                     <div class="tile-n" id="count-working">—</div>
                     <div class="tile-l">Trabajando</div>
@@ -45,32 +81,32 @@
                     <div class="tile-l">Sin fichar</div>
                 </div>
             </div>
-        </section>
 
-        <section class="surface stack-4">
-            <h2>Plantilla</h2>
-            <table class="table" id="staff-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Empleado</th>
-                        <th scope="col">Entrada</th>
-                        <th scope="col">Acumulado hoy</th>
-                        <th scope="col" class="right">Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="staff-list"></tbody>
-            </table>
+            <section class="surface stack-4">
+                <h3>Plantilla</h3>
+                <table class="table" id="staff-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Empleado</th>
+                            <th scope="col">Entrada</th>
+                            <th scope="col">Acumulado hoy</th>
+                            <th scope="col" class="right">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-list"></tbody>
+                </table>
 
-            <div class="empty" id="staff-empty" hidden>
-                <h3>Este local no tiene a nadie dado de alta</h3>
-                <p>Añade a tu equipo para poder llevar el registro de jornada.</p>
-            </div>
-        </section>
+                <div class="empty" id="staff-empty" hidden>
+                    <h4>Este local no tiene a nadie dado de alta</h4>
+                    <p>Añade a tu equipo para poder llevar el registro de jornada.</p>
+                </div>
+            </section>
+        </div>
     </main>
 
     <script src="js/notice.js"></script>
     <script src="js/modal.js"></script>
     <script src="js/shell.js"></script>
-    <script src="js/timeclock-admin.js"></script>
+    <script src="js/timeclock.js"></script>
 </body>
 </html>

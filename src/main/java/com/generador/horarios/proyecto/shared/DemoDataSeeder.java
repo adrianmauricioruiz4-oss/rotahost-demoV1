@@ -94,7 +94,7 @@ public class DemoDataSeeder implements CommandLineRunner {
         // El nombre cuadra con el dominio de los correos del equipo, y el cierre con el
         // final del último turno (TARDE acaba a medianoche): antes decía "Restaurante" y
         // cerraba a las 02:00, una hora que ningún turno de la demo llegaba a cubrir.
-        Venue venue = venueRepository.save(new Venue("Bar La Esquina", LocalTime.of(8, 0), LocalTime.MIDNIGHT));
+        Venue venue = venueRepository.save(new Venue("Restaurante El Mirador", LocalTime.of(8, 0), LocalTime.MIDNIGHT));
 
         ShiftTemplate manana = shiftTemplateRepository.save(new ShiftTemplate("MAÑANA", venue,
                 List.of(new ShiftSegment(LocalTime.of(8, 0), LocalTime.of(16, 0)))));
@@ -190,22 +190,22 @@ public class DemoDataSeeder implements CommandLineRunner {
      * vacíos no enseña esa parte del producto.
      */
     private List<Employee> buildEmployees(Venue venue) {
-        Employee ana = new Employee("Ana García", "ana.garcia@barlaesquina.com", ContractType.FULL_TIME, null, venue);
+        Employee ana = new Employee("Ana García", "ana.garcia@elmirador.com", ContractType.FULL_TIME, null, venue);
         ana.setPositions(Set.of(Position.ENCARGADO, Position.RESPONSABLE_SALA));
         ana.setInternalNotes("Encargada. Lleva el cierre de caja los viernes y sábados.");
 
-        Employee javier = new Employee("Javier Martínez", "javier.martinez@barlaesquina.com", ContractType.FULL_TIME, null, venue);
+        Employee javier = new Employee("Javier Martínez", "javier.martinez@elmirador.com", ContractType.FULL_TIME, null, venue);
         javier.setPositions(Set.of(Position.COCINERO));
 
-        Employee laura = new Employee("Laura Fernández", "laura.fernandez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        Employee laura = new Employee("Laura Fernández", "laura.fernandez@elmirador.com", ContractType.PART_TIME, 20, venue);
         laura.setPositions(Set.of(Position.CAMARERO, Position.RESPONSABLE_SALA));
 
-        Employee carlos = new Employee("Carlos Rodríguez", "carlos.rodriguez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        Employee carlos = new Employee("Carlos Rodríguez", "carlos.rodriguez@elmirador.com", ContractType.PART_TIME, 20, venue);
         carlos.setPositions(Set.of(Position.CAMARERO));
         carlos.setCanWorkSplitShift(false);
         carlos.setInternalNotes("Vive fuera del pueblo: no le compensa volver, nada de turnos partidos.");
 
-        Employee maria = new Employee("María López", "maria.lopez@barlaesquina.com", ContractType.PART_TIME, 20, venue);
+        Employee maria = new Employee("María López", "maria.lopez@elmirador.com", ContractType.PART_TIME, 20, venue);
         maria.setPositions(Set.of(Position.AYUDANTE_COCINA, Position.CAMARERO));
 
         return List.of(ana, javier, laura, carlos, maria);
