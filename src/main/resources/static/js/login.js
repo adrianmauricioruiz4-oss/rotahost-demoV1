@@ -5,14 +5,7 @@ function csrfToken() {
 }
 
 function setStatusMessage(message, isError) {
-    const el = document.getElementById("status-message");
-    if (!message) {
-        el.hidden = true;
-        return;
-    }
-    el.textContent = message;
-    el.className = "status-message " + (isError ? "error" : "success");
-    el.hidden = false;
+    showNotice("status-message", message, isError ? "alert" : "ok");
 }
 
 async function fetchJson(url, options) {
@@ -89,9 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
         setStatusMessage("Sesión cerrada.", false);
     }
 
-    document.getElementById("forgot-password-link").addEventListener("click", (event) => {
-        event.preventDefault();
-        showToast("La recuperación de contraseña todavía no está disponible. Pídesela a tu encargado.", "warn");
+    document.getElementById("forgot-password-link").addEventListener("click", () => {
+        setStatusMessage("La recuperación de contraseña todavía no está disponible. Pídesela a tu encargado.", true);
     });
 
     loadGuestRoster();
